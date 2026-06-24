@@ -7,6 +7,7 @@ build/
 
 # Environment files
 .env
+.env.team
 .env.local
 .env.*.local
 
@@ -48,3 +49,6 @@ dev.ps1
 
 # Temp files
 temp/
+
+# Planning
+plan.md
