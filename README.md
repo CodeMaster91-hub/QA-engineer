@@ -24,6 +24,15 @@ npm run dev:backend
 npm run dev:frontend
 ```
 
+## Конфигурация
+
+Скопируйте `.env.example` в `.env` и заполните секреты:
+
+```bash
+cp .env.example .env
+# Отредактируйте .env, вставив реальные ключи
+```
+
 ## Структура проекта
 
 ```
