@@ -75,7 +75,7 @@ import { ref } from 'vue'
 export interface StageInfo {
   key: string
   label: string
-  status: 'created' | 'running' | 'success' | 'failed' | 'canceled' | 'blocked' | 'waiting'
+  status: 'created' | 'running' | 'success' | 'failed' | 'canceled' | 'blocked' | 'waiting' | 'paused'
 }
 
 defineProps<{
