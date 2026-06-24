@@ -1,0 +1,26 @@
+{
+  "name": "qa-engineer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QA-платформа для автоматизированного тестирования требований",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace=apps/backend",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "test": "npm run test --workspace=apps/backend",
+    "test:e2e": "npm run test:e2e --workspace=apps/backend",
+    "lint": "npm run lint --workspace=apps/backend",
+    "db:reset": "npm run typeorm:drop && npm run typeorm:migration:run"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0"
+  }
+}

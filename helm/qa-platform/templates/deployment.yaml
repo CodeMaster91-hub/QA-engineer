@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qa-platform.fullname" . }}
+  labels:
+    {{- include "qa-platform.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "qa-platform.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "qa-platform.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              value: {{ .Values.postgresql.host }}
+            - name: DB_PORT
+              value: {{ .Values.postgresql.port | quote }}
+            - name: DB_DATABASE
+              value: {{ .Values.postgresql.database }}
+            - name: DB_USERNAME
+              value: {{ .Values.postgresql.username }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qa-platform.fullname" . }}-db
+                  key: password
+            - name: REDIS_ENABLED
+              value: {{ .Values.redis.enabled | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qa-platform.fullname" . }}-jwt
+                  key: secret
+            - name: LLM_MOCK
+              value: {{ .Values.llm.mock | quote }}
+            - name: LLM_BASE_URL
+              value: {{ .Values.llm.baseUrl }}
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qa-platform.fullname" . }}-llm
+                  key: apiKey
+                  optional: true
+            - name: AUTHENTIK_ISSUER
+              value: {{ .Values.authentik.issuer }}
+            - name: AUTHENTIK_CLIENT_ID
+              value: {{ .Values.authentik.clientId }}
+            - name: AUTHENTIK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qa-platform.fullname" . }}-authentik
+                  key: clientSecret
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

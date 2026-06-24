@@ -1,0 +1,59 @@
+replicaCount: 1
+
+image:
+  repository: qa-platform
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: qa-platform.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+postgresql:
+  host: postgresql
+  port: 5432
+  database: qa_platform
+  username: qa_user
+  password: ""
+
+redis:
+  enabled: false
+  host: redis
+  port: 6379
+
+llm:
+  mock: true
+  baseUrl: ""
+  apiKey: ""
+
+authentik:
+  issuer: ""
+  clientId: ""
+  clientSecret: ""
+
+jwt:
+  secret: ""

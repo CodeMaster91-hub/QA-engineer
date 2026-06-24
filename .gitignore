@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+.tmp/
+
+# Work directory (artifacts)
+work/
+
+# Data directory
+data/
+
+# Docker
+docker-compose.override.yml
+
+# Package-lock (monorepo)
+package-lock.json
+
+# Dev scripts
+dev.ps1
+
+# Temp files
+temp/

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: qa-platform
+description: QA Platform for automated requirements testing
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
