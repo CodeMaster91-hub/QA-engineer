@@ -7,17 +7,8 @@ services:
       dockerfile: apps/backend/Dockerfile
     ports:
       - "3000:3000"
-    environment:
-      - DB_HOST=postgres-shared
-      - DB_PORT=5432
-      - DB_DATABASE=qa_platform
-      - DB_USERNAME=qa_user
-      - DB_PASSWORD=${DB_PASSWORD:-strong_password}
-      - DB_SCHEMA=${TEAM_NAME:-team1}
-      - REDIS_ENABLED=false
-      - LLM_BASE_URL=http://corporate-llm:8080/v1
-      - LLM_MOCK=true
-      - NODE_ENV=development
+    env_file:
+      - .env.team
     volumes:
       - ./apps/backend/src:/app/apps/backend/src
     depends_on:

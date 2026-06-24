@@ -3,10 +3,12 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: qa_platform
-      POSTGRES_USER: qa_user
-      POSTGRES_PASSWORD: strong_password
+      POSTGRES_DB: ${DB_DATABASE:-qa_platform}
+      POSTGRES_USER: ${DB_USERNAME:-qa_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strong_password}
     ports:
       - "5432:5432"
     volumes:
@@ -18,19 +20,8 @@ services:
       dockerfile: apps/backend/Dockerfile
     ports:
       - "3000:3000"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_DATABASE=qa_platform
-      - DB_USERNAME=qa_user
-      - DB_PASSWORD=strong_password
-      - DB_SCHEMA=public
-      - REDIS_ENABLED=false
-      - NODE_ENV=development
-      - JWT_SECRET=dev-secret-change-in-production
-      - LLM_MOCK=true
-      - TMS_PROVIDER=testrail
-      - TESTRAIL_MOCK=true
+    env_file:
+      - .env
     depends_on:
       - postgres
 
