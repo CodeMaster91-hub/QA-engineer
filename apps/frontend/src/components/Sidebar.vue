@@ -16,11 +16,11 @@
 
     <div class="resize-handle" @mousedown="startResize"></div>
 
-    <div class="sidebar-header" @click.stop>
+    <div class="sidebar-header" @click="onSidebarClick">
       <button v-if="sidebarWidth > 60" class="btn-new" @click="showCreate = true">+ Новая фича</button>
     </div>
 
-    <div class="sidebar-list" @click.stop>
+    <div class="sidebar-list" @click="onSidebarClick">
       <div v-if="loading" class="sidebar-loading">Загрузка...</div>
 
       <template v-else>
