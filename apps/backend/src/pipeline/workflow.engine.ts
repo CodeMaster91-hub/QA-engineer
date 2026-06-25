@@ -434,13 +434,15 @@ export class WorkflowEngine {
       parsed = { coverage: {}, gaps: [] };
     }
 
-    const coverage = parsed.coverage || {};
     const gaps = parsed.gaps || [];
 
     await this.featuresService.upsertArtifact(
       featureId,
       ArtifactType.COVERAGE,
-      coverage,
+      {
+        coverage: parsed.coverage || {},
+        coverage_matrix_markdown: parsed.coverage_matrix_markdown || '',
+      },
     );
 
     // Если есть gaps — показываем QA, ждём команды
@@ -449,7 +451,7 @@ export class WorkflowEngine {
       return {
         stage: PipelineStage.COVERAGE_AUDITED,
         status: 'waiting_for_qa',
-        output: coverage,
+        output: parsed.coverage || {},
         coverageGaps: gaps,
         timestamp: new Date(),
       };
@@ -458,7 +460,7 @@ export class WorkflowEngine {
     return {
       stage: PipelineStage.COVERAGE_AUDITED,
       status: 'completed',
-      output: coverage,
+      output: parsed.coverage || {},
       timestamp: new Date(),
     };
   }
