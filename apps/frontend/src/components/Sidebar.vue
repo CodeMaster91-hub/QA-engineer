@@ -457,7 +457,7 @@ onUnmounted(() => {
   width: 270px;
   min-width: 0;
   height: 100vh;
-  background: #444c62;
+  background: #1a1f2e;
   color: #e0e0e0;
   display: flex;
   flex-direction: column;
@@ -519,8 +519,8 @@ onUnmounted(() => {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
-  background: #4fc3f7;
-  color: #1a1a2e;
+  background: #764982;
+  color: white;
   font-weight: 600;
   font-size: 0.85em;
   cursor: pointer;
@@ -529,7 +529,7 @@ onUnmounted(() => {
 }
 
 .btn-new:hover {
-  background: #29b6f6;
+  background: #8a5a96;
 }
 
 .sidebar-list {
@@ -562,19 +562,19 @@ onUnmounted(() => {
   transition: background 0.15s;
   position: relative;
   margin-bottom: 6px;
-  background: #6a7389;
+  background: #2f3548;
   border: 1px solid transparent;
 }
 
 .sidebar-item:hover {
-  background: #7a8399;
+  background: #3f4558;
 }
 
 .sidebar-item.selected {
-  background: #7a8399;
-  outline: 2px solid #4fc3f7;
+  background: #1068bf;
+  outline: 2px solid #1068bf;
   outline-offset: -2px;
-  border-color: #4fc3f744;
+  border-color: transparent;
 }
 
 .status-dot {
