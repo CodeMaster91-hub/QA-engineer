@@ -39,12 +39,12 @@
 
         <svg v-else-if="stageObj.status === 'queued'" class="stage-icon" viewBox="0 0 16 16" width="16" height="16">
           <circle cx="8" cy="8" r="7" fill="currentColor"/>
-          <path d="M13.5 2.5 A7 7 0 0 0 5.5 2.5 L8 8Z" fill="white"/>
+          <path d="M8 8 L8 1 A7 7 0 0 0 1.94 11.5 Z" fill="white"/>
         </svg>
 
         <svg v-else class="stage-icon" viewBox="0 0 16 16" width="16" height="16">
           <circle cx="8" cy="8" r="7" fill="currentColor"/>
-          <path d="M13.5 2.5 A7 7 0 0 0 5.5 2.5 L8 8Z" fill="white"/>
+          <path d="M8 8 L8 1 A7 7 0 0 0 1.94 11.5 Z" fill="white"/>
         </svg>
 
         <!-- Restart overlay on hover -->
