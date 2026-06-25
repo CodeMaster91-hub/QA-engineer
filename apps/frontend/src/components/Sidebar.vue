@@ -1,14 +1,15 @@
 <template>
   <div class="sidebar" :class="{ collapsed: isCollapsed }">
+    <button class="collapse-btn" @click="isCollapsed = !isCollapsed" :title="isCollapsed ? 'Развернуть' : 'Свернуть'">
+      <svg v-if="!isCollapsed" viewBox="0 0 16 16" width="16" height="16">
+        <path d="M10 4L6 8L10 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg v-else viewBox="0 0 16 16" width="16" height="16">
+        <path d="M6 4L10 8L6 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+
     <div class="sidebar-header">
-      <button class="collapse-btn" @click="isCollapsed = !isCollapsed" :title="isCollapsed ? 'Развернуть' : 'Свернуть'">
-        <svg v-if="!isCollapsed" viewBox="0 0 16 16" width="16" height="16">
-          <path d="M10 4L6 8L10 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <svg v-else viewBox="0 0 16 16" width="16" height="16">
-          <path d="M6 4L10 8L6 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
       <button v-if="!isCollapsed" class="btn-new" @click="showCreate = true">+ Новая фича</button>
     </div>
 
@@ -46,8 +47,8 @@
     <div class="sidebar-footer">
       <div
         class="sidebar-item settings-item"
-        :class="{ selected: route.path === '/settings' }"
-        @click="navigateToSettings"
+        :class="{ selected: showSettings }"
+        @click="showSettings = !showSettings"
       >
         <div class="settings-icon">⚙️</div>
         <template v-if="!isCollapsed">
@@ -58,6 +59,13 @@
         <template v-else>
           <div class="tooltip">Настройки</div>
         </template>
+      </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div v-if="showSettings" class="settings-overlay" @click.self="showSettings = false">
+      <div class="settings-panel">
+        <SettingsView />
       </div>
     </div>
 
@@ -129,6 +137,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/api/client'
+import SettingsView from '@/views/SettingsView.vue'
 import { PIPELINE_STAGE_ORDER } from '@/api/types'
 import type { Pipeline } from '@/api/types'
 
@@ -136,6 +145,7 @@ const router = useRouter()
 const route = useRoute()
 
 const isCollapsed = ref(false)
+const showSettings = ref(false)
 const features = ref<any[]>([])
 const loading = ref(true)
 const showCreate = ref(false)
@@ -196,10 +206,6 @@ watch(selectedFile, (file) => {
 
 const navigateTo = (slug: string) => {
   router.push(`/features/${slug}`)
-}
-
-const navigateToSettings = () => {
-  router.push('/settings')
 }
 
 const loadFeatures = async () => {
@@ -407,29 +413,36 @@ onUnmounted(() => {
 }
 
 .sidebar.collapsed {
-  width: 120px;
-  min-width: 120px;
+  width: 60px;
+  min-width: 60px;
 }
 
 .sidebar-header {
   padding: 12px;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
   border-bottom: 1px solid #2a2a4e;
 }
 
 .collapse-btn {
-  background: none;
-  border: none;
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: #2a2a4e;
+  border: 1px solid #3a3a5e;
   color: #ccc;
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
+  transition: color 0.2s, background 0.2s;
+  width: 20px;
+  height: 20px;
 }
 
 .collapse-btn:hover {
@@ -566,7 +579,7 @@ onUnmounted(() => {
 .settings-icon {
   font-size: 1.2em;
   flex-shrink: 0;
-  width: 10px;
+  width: 24px;
   text-align: center;
 }
 
@@ -766,4 +779,25 @@ onUnmounted(() => {
 }
 
 .btn-primary:hover:not(:disabled) { background: #0d0d1a; }
+
+.settings-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.settings-panel {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
 </style>
