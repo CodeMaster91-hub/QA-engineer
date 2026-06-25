@@ -631,6 +631,28 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pipeline-bar-wrapper {
+  flex: 1;
+  overflow: visible;
+}
+
+.pipeline-bar-wrapper :deep(.pipeline-bar) {
+  transform: scale(1.1);
+  transform-origin: left center;
+}
+
+.pipeline-controls {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .pipeline-info {
   margin-top: 12px;
   display: flex;
