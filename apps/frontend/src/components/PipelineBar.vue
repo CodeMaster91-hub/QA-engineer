@@ -118,8 +118,7 @@ const connectorClass = (status: string) => {
   align-items: center;
   gap: 0;
   padding: 16px 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
 .pipeline-stage {
@@ -144,10 +143,11 @@ const connectorClass = (status: string) => {
   flex-shrink: 0;
   transition: all 0.2s ease;
   position: relative;
+  border: 2px solid transparent;
 }
 
 .stage-node.selected {
-  box-shadow: 0 0 0 3px rgba(16, 104, 191, 0.3);
+  border-color: #1068bf;
 }
 
 .stage-icon {
