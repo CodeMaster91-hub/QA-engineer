@@ -143,12 +143,11 @@ const connectorClass = (status: string) => {
   flex-shrink: 0;
   transition: all 0.2s ease;
   position: relative;
-  border: 2px solid transparent;
-  box-sizing: border-box;
 }
 
 .stage-node.selected {
-  border-color: #1068bf;
+  outline: 2px solid #1068bf;
+  outline-offset: -2px;
 }
 
 .stage-node.selected {
