@@ -286,20 +286,35 @@ export class PipelineService {
 
     const result = await this.workflowEngine.fillGaps(pipeline.featureId, gaps);
 
-    if (result.status === 'completed' || result.status === 'waiting_for_qa') {
-      await this.handleStageResult(pipeline.id, PipelineStage.COVERAGE_AUDITED, result);
-    } else {
-      pipeline.status = PipelineStatus.WAITING_FOR_QA;
-      pipeline.blockedStage = PipelineStage.COVERAGE_AUDITED;
-      pipeline.coverageGaps = gaps;
-      await this.pipelineRepository.save(pipeline);
-    }
-
     await this.eventsService.emit(pipeline.featureId, {
       type: 'pipeline:fill-gaps-done',
-      data: { success: result.status !== 'failed', error: result.error || null },
+      data: { success: result.status === 'completed', error: result.error || null },
       timestamp: new Date(),
     });
+
+    if (result.status === 'completed') {
+      pipeline.status = PipelineStatus.RUNNING;
+      pipeline.currentStage = PipelineStage.COVERAGE_AUDITED;
+      await this.pipelineRepository.save(pipeline);
+
+      const featureSlug = (pipeline as any).feature?.slug || slug;
+      await this.pipelineQueue.add({
+        pipelineId: pipeline.id,
+        featureId: pipeline.featureId,
+        featureSlug,
+        stage: PipelineStage.COVERAGE_AUDITED,
+      });
+    } else {
+      pipeline.status = PipelineStatus.FAILED;
+      pipeline.error = result.error || 'Failed to fill gaps';
+      await this.pipelineRepository.save(pipeline);
+
+      await this.eventsService.emit(pipeline.featureId, {
+        type: 'pipeline:failed',
+        data: { stage: PipelineStage.TEST_CASES_CREATED, error: result.error },
+        timestamp: new Date(),
+      });
+    }
 
     return this.findByFeatureSlug(slug);
   }

@@ -690,8 +690,12 @@ export class WorkflowEngine {
 
     this.logger.log(`Fill gaps: added ${newCases.length} cases, total: ${merged.length}`);
 
-    // Auto-reaudit coverage
-    return this.auditCoverage(featureId, {});
+    return {
+      stage: PipelineStage.TEST_CASES_CREATED,
+      status: 'completed',
+      output: { cases: merged },
+      timestamp: new Date(),
+    };
   }
 
   private extractMaxCaseId(cases: any[]): number {

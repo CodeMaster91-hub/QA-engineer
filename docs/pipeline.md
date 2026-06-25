@@ -238,12 +238,17 @@ Body: { "stage": "requirements_extracted" }
 **Логика:**
 1. LLM генерирует новые тест-кейсы для каждого gap (модель `test_cases_created`)
 2. Новые кейсы объединяются с существующими (merge, перенумерация ID)
-3. Автоматический переаудит покрытия (модель `coverage_audited`)
-4. Если пробелы остались → `waiting_for_qa`, если нет → `completed`
+3. Эмит `pipeline:fill-gaps-done` — UI обновляет список тест-кейсов
+4. Этап `coverage_audited` запускается через очередь как обычный этап пайплайна
+5. Если пробелы остались → `waiting_for_qa`, если нет → `completed` → auto-advance на `review`
 
-**SSE события:**
-- `pipeline:fill-gaps-started` — начало генерации
-- `pipeline:fill-gaps-done` — завершение (триггерит обновление UI)
+**SSE события (порядок):**
+1. `pipeline:fill-gaps-started` — начало генерации (спинер на test_cases)
+2. `pipeline:fill-gaps-done` — кейсы сгенерированы и сохранены (убираем спинер, обновляем UI)
+3. `pipeline:progress` / `pipeline:stage-update` — покрытие в процессе
+4. `pipeline:waiting_for_qa` — если есть gaps/questions
+   ИЛИ
+   `pipeline:stage-update` — покрытие completed, переход на review
 
 **Отличие от Restart stage:**
 - Restart stage: удаляет все тест-кейсы → генерирует с нуля
