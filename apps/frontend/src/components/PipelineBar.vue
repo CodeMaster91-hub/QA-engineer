@@ -117,7 +117,7 @@ const connectorClass = (status: string) => {
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 16px 0;
+  padding: 16px 8px;
   overflow: hidden;
 }
 
@@ -144,6 +144,11 @@ const connectorClass = (status: string) => {
   transition: all 0.2s ease;
   position: relative;
   border: 2px solid transparent;
+  box-sizing: border-box;
+}
+
+.stage-node.selected {
+  border-color: #1068bf;
 }
 
 .stage-node.selected {
