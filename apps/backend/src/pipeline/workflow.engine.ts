@@ -389,24 +389,33 @@ export class WorkflowEngine {
       [
         {
           role: 'system',
-          content: `Проведи аудит покрытия требований тест-кейсами.
+           content: `Проведи аудит покрытия требований тест-кейсами.
 
-Для каждого требования укажи статус покрытия: Covered, Partially Covered или Not Covered.
-Перечисли тест-кейсы, которые покрывают каждое требование.
+ ПРАВИЛА:
+ - "Covered" = есть хотя бы один тест-кейс, чьи шаги (steps) проверяют это требование
+ - "Partially Covered" = кейс есть, но не все аспекты проверены
+ - "Not Covered" = тест-кейсов вообще нет
 
-Если есть требования, которые не покрыты тест-кейсами — добавь их описание в поле gaps.
-Формат gaps: ["REQ-001: нет негативного тест-кейса", "REQ-003: не проверяется boundary case"]
+ ВАЖНО:
+ - В gaps добавляй ТОЛЬКО аспекты, которых ДЕЙСТВИТЕЛЬНО нет ни в одном тест-кейсе
+ - НЕ добавляй гипотетические edge cases, если требование не упоминает их
+ - Если требование говорит "должна быть кнопка" — кейс на нажатие кнопки = Covered
+ - Анализируй шаги (steps) каждого тест-кейса, а не только заголовок
+ - Перечитывай каждый gap из предыдущего раунда: если сейчас есть кейс, который закрывает этот gap — НЕ добавляй его снова
 
-Верни только JSON без markdown-обёртки:
-{
-  "coverage": {
-    "requirements_coverage": [
-      { "requirement_id": "REQ-001", "status": "Covered", "covered_by": ["TC-001", "TC-002"] }
-    ]
-  },
-  "coverage_matrix_markdown": "| REQ | Status | Covered by |\n|-----|--------|------------|\n| REQ-001 | Covered | TC-001 |",
-  "gaps": ["...", "..."]
-}`,
+ Формат gaps: ["REQ-001: нет проверки X", ...]
+ Где X — конкретный аспект из текста требования, которого нет в шагах тест-кейсов.
+
+ Верни только JSON без markdown-обёртки:
+ {
+   "coverage": {
+     "requirements_coverage": [
+       { "requirement_id": "REQ-001", "status": "Covered", "covered_by": ["TC-001", "TC-002"] }
+     ]
+   },
+   "coverage_matrix_markdown": "| REQ | Status | Covered by |\n|-----|--------|------------|\n| REQ-001 | Covered | TC-001 |",
+   "gaps": ["...", "..."]
+ }`,
         },
         {
           role: 'user',
@@ -621,36 +630,43 @@ export class WorkflowEngine {
       [
         {
           role: 'system',
-          content: `Ты агент Test Case Designer.
-Аудит покрытия выявил пробелы — нужны дополнительные тест-кейсы.
+           content: `Ты агент Test Case Designer.
+ Аудит покрытия выявил пробелы — нужны дополнительные тест-кейсы.
 
-Задача: для каждого пробела создай один тест-кейс.
-Не дублируй существующие кейсы.
+ ВНИМАНИЕ: ниже передан ПОЛНЫЙ список существующих тест-кейсов.
+ Проверь каждый gap — возможно, он уже покрыт существующим кейсом.
+ Создавай новый кейс ТОЛЬКО если существующие не закрывают gap.
 
-Формат каждого тест-кейса:
-- id: TC-### (используй нумерацию начиная с ${maxExistingId + 1})
-- title: краткое название
-- section: секция
-- priority: high|medium|low
-- type: positive|negative|boundary|validation|permission|integration|regression
-- status: draft
-- automation_candidate: true
-- preconditions: условия
-- steps: [{ action, expected }]
-- final_expected_result: ожидаемый результат
-- requirement_ids: ["REQ-001"]
-- test_data: []
-- tags: []
+ ГРУППИРОВКА:
+ Объединяй позитивные и негативные кейсы с похожими шагами или одним уровнем проверки.
+ - Если проверяешь валидацию нескольких полей одной формы — один кейс с несколькими шагами, а не по кейсу на поле.
+ - Если проверяешь негативные сценарии одного модуля (например, кодировки CSV) — один кейс, шаги по каждому сценарию.
+ - Не создавай отдельные кейсы с одним шагом внутри.
 
-Верни только JSON без markdown-обёртки:
-{ "cases": [новые тест-кейсы] }`,
+ Формат каждого тест-кейса:
+ - id: TC-### (используй нумерацию начиная с ${maxExistingId + 1})
+ - title: краткое название
+ - section: секция
+ - priority: high|medium|low
+ - type: positive|negative|boundary|validation|permission|integration|regression
+ - status: draft
+ - automation_candidate: true
+ - preconditions: условия
+ - steps: [{ action, expected }] — несколько шагов, если проверяешь связанные аспекты
+ - final_expected_result: ожидаемый результат
+ - requirement_ids: ["REQ-001"]
+ - test_data: []
+ - tags: []
+
+ Верни только JSON без markdown-обёртки:
+ { "cases": [новые тест-кейсы] }`,
         },
         {
           role: 'user',
           content: JSON.stringify({
             requirements: requirementsArtifact.content,
             gaps,
-            existingCaseCount: existingCases.length,
+            existingCases,
           }),
         },
       ],
