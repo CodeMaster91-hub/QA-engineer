@@ -43,12 +43,43 @@
 
       <!-- Pipeline Bar -->
       <div class="pipeline-section" v-if="pipeline">
-        <PipelineBar
-          :stages="pipelineStages"
-          :selectedStage="selectedStage || undefined"
-          @select:stage="onStageSelect"
-          @restart:stage="onRestartStage"
-        />
+        <div class="pipeline-row">
+          <div class="pipeline-bar-wrapper">
+            <PipelineBar
+              :stages="pipelineStages"
+              :selectedStage="selectedStage || undefined"
+              @select:stage="onStageSelect"
+              @restart:stage="onRestartStage"
+            />
+          </div>
+
+          <div class="pipeline-controls">
+            <button
+              v-if="canRun"
+              @click="runPipeline"
+              class="btn btn-primary"
+              :disabled="submitting"
+            >
+              {{ submitting ? 'Запуск...' : '▶ Run Pipeline' }}
+            </button>
+
+            <button
+              v-if="pipeline?.status === 'running'"
+              @click="cancelPipeline"
+              class="btn btn-danger"
+            >
+              ⏹ Cancel
+            </button>
+
+            <button
+              v-if="pipeline?.status === 'completed' || pipeline?.status === 'failed'"
+              @click="restartPipeline"
+              class="btn"
+            >
+              ↻ Restart
+            </button>
+          </div>
+        </div>
 
         <div class="pipeline-info">
           <span v-if="pipeline.error" class="pipeline-error">{{ pipeline.error }}</span>
@@ -56,34 +87,6 @@
             Stage {{ currentStageIndex + 1 }} of {{ totalStages }}
           </span>
         </div>
-      </div>
-
-      <!-- Controls -->
-      <div class="controls">
-        <button
-          v-if="canRun"
-          @click="runPipeline"
-          class="btn btn-primary"
-          :disabled="submitting"
-        >
-          {{ submitting ? 'Запуск...' : '▶ Run Pipeline' }}
-        </button>
-
-        <button
-          v-if="pipeline?.status === 'running'"
-          @click="cancelPipeline"
-          class="btn btn-danger"
-        >
-          ⏹ Cancel
-        </button>
-
-        <button
-          v-if="pipeline?.status === 'completed' || pipeline?.status === 'failed'"
-          @click="restartPipeline"
-          class="btn"
-        >
-          ↻ Restart
-        </button>
       </div>
 
       <!-- Stage Content -->
