@@ -50,16 +50,7 @@ export class PipelineProcessor {
 
     try {
       const pipeline = await this.pipelineService.findByFeatureSlug(featureSlug);
-      const result = await this.workflowEngine.executeStage(
-        stage as PipelineStage,
-        featureSlug,
-        pipeline.stageResults || {},
-      );
 
-      // handleStageResult FIRST — saves stageResults to DB before SSE
-      await this.pipelineService.handleStageResult(pipelineId, stage, result);
-
-      // THEN emit SSE — frontend poll will see updated stageResults
       await this.eventsService.emitPipelineProgress({
         featureId,
         featureSlug,
@@ -68,6 +59,14 @@ export class PipelineProcessor {
         total: totalStages,
         status: 'running',
       });
+
+      const result = await this.workflowEngine.executeStage(
+        stage as PipelineStage,
+        featureSlug,
+        pipeline.stageResults || {},
+      );
+
+      await this.pipelineService.handleStageResult(pipelineId, stage, result);
 
       // Обработка blocked/waiting_for_qa
       if (result.status === 'blocked') {

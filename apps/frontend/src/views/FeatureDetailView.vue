@@ -118,6 +118,10 @@
         <ReviewStage
           v-else-if="selectedStage === 'review'"
           :artifact="getArtifact('review')"
+          :requirementsArtifact="getArtifact('requirements')"
+          :testcasesArtifact="getArtifact('testcases')"
+          :coverageArtifact="getArtifact('coverage')"
+          :pipelineQuestions="pipeline?.questions"
         />
         <DryRunStage
           v-else-if="selectedStage === 'dry_run_completed'"

@@ -85,7 +85,7 @@ const PIPELINE_STAGES_UI = [
 |------|-------|----------|
 | requirements_extracted | LLM обнаружил неясности в требованиях | Вопросы показываются QA, pipeline блокируется |
 | coverage_audited | Обнаружены пробелы в покрытии | Gaps показываются QA, ждёт команды |
-| review | Ревью завершено | **Hard stop** — всегда ждёт апрува QA |
+| review | Ревью завершено | **Hard stop** — всегда ждёт апрува QA. UI: спиннер во время LLM, затем пауза |
 | dry_run_completed | Dry-run завершён | Ждёт апрува перед публикацией в TestRail |
 
 ### Blocked (вопросы)
