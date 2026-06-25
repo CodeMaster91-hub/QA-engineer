@@ -50,6 +50,30 @@ apps/
 │       ├── health/   # Health check endpoints
 │       └── common/   # InMemoryQueue, Tenant, FileProcessor, UrlFetcher
 └── frontend/         # Vue 3 SPA
+    ├── components/   # Vue компоненты
+    │   ├── Sidebar.vue  # Левое меню (фичи, SSE, collapse, resize)
+    │   └── stages/      # Stage-компоненты
+    ├── views/        # Vue страницы
+    └── router/       # Vue Router
+```
+
+## Layout
+
+```
+┌──────────────┬──────────────────────────────────────┐
+│  Sidebar     │  Main Content                        │
+│  270px/60px  │  (scroll, hidden scrollbar)          │
+│              │                                      │
+│  + Новая     │  FeatureDetailView                   │
+│  ─────────── │  ──────────────────────────────────  │
+│  🟢 Фича 1  │  Title + status + controls           │
+│  (selected)  │  PipelineBar                         │
+│              │  Stage content                       │
+│  🟡 Фича 2  │                                      │
+│              │                                      │
+│  ─────────── │                                      │
+│  ⚙️ Settings │  (overlay на текущее окно)            │
+└──────────────┴──────────────────────────────────────┘
 ```
 
 ## API Endpoints
