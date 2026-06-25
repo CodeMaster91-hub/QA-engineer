@@ -254,7 +254,8 @@ export const STAGE_ORDER = [
   'new',
   'source_ingested',
   'requirements_extracted',
-  'draft_created',
+  'test_plan_created',
+  'test_cases_created',
   'coverage_audited',
   'unit_tests_generated',  // Новый этап
   'review',
@@ -303,13 +304,13 @@ describe('Unit test generator stage', () => {
 ## Сценарий 6: Исправление проблемы на продакшене
 
 ### Проблема
-> "Пайплайн завис на этапе draft_created, не завершается"
+> "Пайплайн завис на этапе test_plan_created, не завершается"
 
 ### Шаг 1: Диагностика
 
 ```bash
 # Проверяем логи
-@server-operator покажи последние 100 строк logs/backend.log | grep -i "draft_created"
+@server-operator покажи последние 100 строк logs/backend.log | grep -i "test_plan_created"
 
 # Проверяем статус Redis очереди
 @server-operator выполни: redis-cli LLEN bull:pipeline:wait
@@ -331,7 +332,7 @@ curl -X POST http://localhost:3000/api/pipeline/my-feature/cancel \
 ```bash
 curl -X POST http://localhost:3000/api/pipeline/my-feature/restart \
   -H "Authorization: Bearer <token>" \
-  -d '{"fromStage": "draft_created"}'
+  -d '{"fromStage": "test_plan_created"}'
 ```
 
 ### Шаг 5: Исправляешь корневую причину

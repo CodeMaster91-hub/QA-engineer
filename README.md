@@ -96,18 +96,18 @@ apps/
 | POST | /api/pipeline/:slug/approve | JWT | Одобрить gate |
 | POST | /api/pipeline/:slug/answer | JWT | Ответить на вопросы |
 | POST | /api/pipeline/:slug/restart-stage | JWT | Перезапустить этап |
+| POST | /api/pipeline/:slug/fill-gaps | JWT | Дополнить тест-кейсы для пробелов покрытия |
 
-### Pipeline Stages (UI)
-| # | Stage | Описание | Рендер |
-|---|-------|----------|--------|
-| 1 | Source | Исходный бандл | markdown → HTML |
-| 2 | Requirements | Требования | JSON → таблица |
-| 3 | Test Plan | Тест план | markdown → HTML |
-| 4 | Test Cases | Тест-кейсы | JSON → таблица |
-| 5 | Coverage | Аудит покрытия | JSON + markdown |
-| 6 | Review | Ревью (hard stop) | JSON + approval |
-| 7 | Dry Run | Пробный запуск | JSON + approval |
-| 8 | Published | Опубликовано | Текст + publish |
+### Pipeline Stages (UI) — 7 этапов (без `new` и `source_ingested`)
+| # | Stage | Backend Stage | Рендер |
+|---|-------|---------------|--------|
+| 1 | Требования | requirements_extracted | Split-screen: источник + таблица |
+| 2 | Тест-план | test_plan_created | markdown → HTML |
+| 3 | Тест-кейсы | test_cases_created | JSON → таблица |
+| 4 | Покрытие | coverage_audited | JSON + markdown |
+| 5 | Ревью | review (hard stop) | JSON + approval |
+| 6 | Пробный запуск | dry_run_completed (hard stop) | JSON + approval |
+| 7 | Опубликовано | published | Текст + publish |
 
 ### Agents
 | Method | Endpoint | Auth | Описание |

@@ -1,5 +1,5 @@
 <template>
-  <div class="split-container">
+  <div class="split-container" ref="containerRef">
     <!-- Left panel: Source -->
     <div class="split-panel source-panel" :style="{ width: leftWidth + 'px' }">
       <div class="panel-header">
@@ -139,6 +139,7 @@ onUnmounted(() => {
   align-items: stretch;
   gap: 0;
   min-height: 400px;
+  width: 100%;
 }
 
 .split-panel {

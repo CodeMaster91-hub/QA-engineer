@@ -29,7 +29,7 @@ apps/
 └── frontend/src/
     ├── api/            - API client (fetch, не axios) и типы
     ├── components/     - Vue компоненты
-    │   ├── stages/     - Stage-компоненты (Source, Requirements, TestPlan, etc.)
+    │   ├── stages/     - Stage-компоненты (Requirements, TestPlan, TestCases, etc.)
     │   └── __tests__/  - Тесты компонентов
     ├── composables/    - Vue composables (useSse)
     ├── utils/          - Утилиты (markdown renderer)

@@ -436,11 +436,11 @@ const initSSE = () => {
   eventSource?.close()
   eventSource = new EventSource(`/api/events/stream/${featureId}`)
 
-  const handleSseMessage = (rawData: string) => {
+  const handleSseMessage = (type: string, rawData: string) => {
     try {
-      const msg = JSON.parse(rawData)
+      const data = JSON.parse(rawData)
 
-      switch (msg.type) {
+      switch (type) {
         case 'pipeline:stage-update':
         case 'pipeline:progress':
         case 'pipeline:blocked':
@@ -452,6 +452,7 @@ const initSSE = () => {
 
         case 'pipeline:fill-gaps-started':
           fillingGaps.value = true
+          scheduleRefresh()
           break
 
         case 'pipeline:fill-gaps-done':
@@ -460,14 +461,12 @@ const initSSE = () => {
           break
 
         case 'pipeline:log':
-          if (msg.data) {
-            logEntries.value.push({
-              level: msg.data.level || 'info',
-              message: msg.data.message || '',
-            })
-            if (msg.data.level === 'info' && msg.data.message?.includes('Completed')) {
-              scheduleRefresh()
-            }
+          logEntries.value.push({
+            level: data.level || 'info',
+            message: data.message || '',
+          })
+          if (data.level === 'info' && data.message?.includes('Completed')) {
+            scheduleRefresh()
           }
           break
       }
@@ -490,12 +489,12 @@ const initSSE = () => {
 
   eventTypes.forEach((type) => {
     eventSource!.addEventListener(type, (e: MessageEvent) => {
-      handleSseMessage(e.data)
+      handleSseMessage(type, e.data)
     })
   })
 
   eventSource.onmessage = (e) => {
-    handleSseMessage(e.data)
+    handleSseMessage('unknown', e.data)
   }
 
   eventSource.onerror = () => {

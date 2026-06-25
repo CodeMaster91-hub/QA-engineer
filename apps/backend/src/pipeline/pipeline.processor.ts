@@ -41,15 +41,6 @@ export class PipelineProcessor {
     const stageIndex = PIPELINE_STAGE_ORDER.indexOf(stage as PipelineStage);
     const totalStages = PIPELINE_STAGE_ORDER.length;
 
-    await this.eventsService.emitPipelineProgress({
-      featureId,
-      featureSlug,
-      stage,
-      progress: stageIndex,
-      total: totalStages,
-      status: 'running',
-    });
-
     await this.eventsService.emitPipelineLog({
       featureId,
       featureSlug,
@@ -65,6 +56,19 @@ export class PipelineProcessor {
         pipeline.stageResults || {},
       );
 
+      // handleStageResult FIRST — saves stageResults to DB before SSE
+      await this.pipelineService.handleStageResult(pipelineId, stage, result);
+
+      // THEN emit SSE — frontend poll will see updated stageResults
+      await this.eventsService.emitPipelineProgress({
+        featureId,
+        featureSlug,
+        stage,
+        progress: stageIndex + 1,
+        total: totalStages,
+        status: 'running',
+      });
+
       // Обработка blocked/waiting_for_qa
       if (result.status === 'blocked') {
         await this.eventsService.emitPipelineLog({
@@ -73,7 +77,6 @@ export class PipelineProcessor {
           message: `Stage ${stage} blocked: ${result.questions?.length || 0} questions require QA answers`,
           level: 'warn',
         });
-        await this.pipelineService.handleStageResult(pipelineId, stage, result);
         return result;
       }
 
@@ -84,7 +87,6 @@ export class PipelineProcessor {
           message: `Stage ${stage} waiting for QA approval`,
           level: 'warn',
         });
-        await this.pipelineService.handleStageResult(pipelineId, stage, result);
         return result;
       }
 
@@ -94,8 +96,6 @@ export class PipelineProcessor {
         message: `Completed stage: ${stage}`,
         level: 'info',
       });
-
-      await this.pipelineService.handleStageResult(pipelineId, stage, result);
 
       this.logger.log(`Job ${job.id} completed for stage: ${stage}`);
       return result;

@@ -23,7 +23,7 @@ coverage_audited → review → dry_run_completed → published
 
 ## UI Pipeline Stages
 
-Backend имеет 9 этапов, UI показывает 8 (без `new`):
+Backend имеет 9 этапов, UI показывает 7 (без `new` и `source_ingested`):
 
 | UI Stage | Backend Stage | Артефакт | Формат рендера |
 |----------|---------------|----------|----------------|
@@ -39,7 +39,6 @@ Backend имеет 9 этапов, UI показывает 8 (без `new`):
 
 ```typescript
 const PIPELINE_STAGES_UI = [
-  { key: 'source_ingested',        backendStage: 'source_ingested' },
   { key: 'requirements_extracted', backendStage: 'requirements_extracted' },
   { key: 'test_plan',              backendStage: 'test_plan_created', artifactType: 'testplan' },
   { key: 'test_cases',             backendStage: 'test_cases_created', artifactType: 'testcases' },

@@ -146,8 +146,7 @@ const connectorClass = (status: string) => {
 }
 
 .stage-node.selected {
-  outline: 2px solid #1068bf;
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px #1068bf;
 }
 
 .stage-node.selected {
