@@ -295,6 +295,7 @@ export class PipelineService {
     if (result.status === 'completed') {
       pipeline.status = PipelineStatus.RUNNING;
       pipeline.currentStage = PipelineStage.COVERAGE_AUDITED;
+      delete pipeline.stageResults[PipelineStage.COVERAGE_AUDITED];
       await this.pipelineRepository.save(pipeline);
 
       const featureSlug = (pipeline as any).feature?.slug || slug;
