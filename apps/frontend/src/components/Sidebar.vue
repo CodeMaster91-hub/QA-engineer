@@ -457,7 +457,7 @@ onUnmounted(() => {
   width: 270px;
   min-width: 0;
   height: 100vh;
-  background: #1a1a2e;
+  background: #252540;
   color: #ccc;
   display: flex;
   flex-direction: column;
@@ -556,22 +556,25 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
   position: relative;
-  margin-bottom: 2px;
+  margin-bottom: 6px;
+  background: #2d2d4a;
+  border: 1px solid transparent;
 }
 
 .sidebar-item:hover {
-  background: #2a2a4e;
+  background: #353560;
 }
 
 .sidebar-item.selected {
-  background: #1e3a5f;
+  background: #353560;
   outline: 2px solid #4fc3f7;
   outline-offset: -2px;
+  border-color: #4fc3f744;
 }
 
 .status-dot {
