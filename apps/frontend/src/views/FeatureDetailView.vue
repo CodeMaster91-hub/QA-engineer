@@ -156,8 +156,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, watch } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import PipelineBar from '@/components/PipelineBar.vue'
 import LogViewer from '@/components/LogViewer.vue'
@@ -543,6 +543,8 @@ const loadAll = async () => {
 onMounted(loadAll)
 
 watch(featureSlug, () => {
+  eventSource?.close()
+  eventSource = null
   selectedStage.value = null
   loadAll()
 })

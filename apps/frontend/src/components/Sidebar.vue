@@ -1,7 +1,12 @@
 <template>
-  <div class="sidebar" :class="{ collapsed: isCollapsed }">
-    <button class="collapse-btn" @click="isCollapsed = !isCollapsed" :title="isCollapsed ? 'Развернуть' : 'Свернуть'">
-      <svg v-if="!isCollapsed" viewBox="0 0 16 16" width="16" height="16">
+  <div
+    class="sidebar"
+    :style="{ width: sidebarWidth + 'px' }"
+    :class="{ transitioning: isTransitioning }"
+    @click="onSidebarClick"
+  >
+    <button class="collapse-btn" @click.stop="onCollapseClick" :title="sidebarWidth <= 60 ? 'Развернуть' : 'Свернуть'">
+      <svg v-if="sidebarWidth > 60" viewBox="0 0 16 16" width="16" height="16">
         <path d="M10 4L6 8L10 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
       <svg v-else viewBox="0 0 16 16" width="16" height="16">
@@ -9,11 +14,13 @@
       </svg>
     </button>
 
-    <div class="sidebar-header">
-      <button v-if="!isCollapsed" class="btn-new" @click="showCreate = true">+ Новая фича</button>
+    <div class="resize-handle" @mousedown="startResize"></div>
+
+    <div class="sidebar-header" @click.stop>
+      <button v-if="sidebarWidth > 60" class="btn-new" @click="showCreate = true">+ Новая фича</button>
     </div>
 
-    <div class="sidebar-list">
+    <div class="sidebar-list" @click.stop>
       <div v-if="loading" class="sidebar-loading">Загрузка...</div>
 
       <template v-else>
@@ -26,7 +33,7 @@
         >
           <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
 
-          <template v-if="!isCollapsed">
+          <template v-if="sidebarWidth > 60">
             <div class="item-info">
               <div class="item-title">{{ feature.title || feature.slug }}</div>
               <div class="item-status">{{ pipelineLabel(feature.slug) }}</div>
@@ -44,14 +51,14 @@
       </div>
     </div>
 
-    <div class="sidebar-footer">
+    <div class="sidebar-footer" @click.stop>
       <div
         class="sidebar-item settings-item"
         :class="{ selected: showSettings }"
         @click="showSettings = !showSettings"
       >
         <div class="settings-icon">⚙️</div>
-        <template v-if="!isCollapsed">
+        <template v-if="sidebarWidth > 60">
           <div class="item-info">
             <div class="item-title">Настройки</div>
           </div>
@@ -137,18 +144,21 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/api/client'
-import SettingsView from '@/views/SettingsView.vue'
 import { PIPELINE_STAGE_ORDER } from '@/api/types'
 import type { Pipeline } from '@/api/types'
+import SettingsView from '@/views/SettingsView.vue'
 
 const router = useRouter()
 const route = useRoute()
 
-const isCollapsed = ref(false)
-const showSettings = ref(false)
+const sidebarWidth = ref(270)
+const previousWidth = ref(270)
+const isTransitioning = ref(false)
+const isResizing = ref(false)
 const features = ref<any[]>([])
 const loading = ref(true)
 const showCreate = ref(false)
+const showSettings = ref(false)
 const submitting = ref(false)
 const error = ref('')
 
@@ -317,6 +327,49 @@ const createFeature = async () => {
   }
 }
 
+// Collapse / Expand
+const onCollapseClick = () => {
+  if (sidebarWidth.value > 60) {
+    previousWidth.value = sidebarWidth.value
+    sidebarWidth.value = 60
+  }
+  isTransitioning.value = true
+  setTimeout(() => { isTransitioning.value = false }, 200)
+}
+
+const onSidebarClick = () => {
+  if (sidebarWidth.value <= 60) {
+    sidebarWidth.value = previousWidth.value
+    isTransitioning.value = true
+    setTimeout(() => { isTransitioning.value = false }, 200)
+  }
+}
+
+// Resize
+const startResize = (e: MouseEvent) => {
+  isResizing.value = true
+  isTransitioning.value = false
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  e.preventDefault()
+}
+
+const onResize = (e: MouseEvent) => {
+  if (!isResizing.value) return
+  const newWidth = Math.max(60, Math.min(500, e.clientX))
+  sidebarWidth.value = newWidth
+}
+
+const stopResize = () => {
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+}
+
 // SSE connections
 interface SseConn {
   eventSource: EventSource | null
@@ -402,19 +455,18 @@ onUnmounted(() => {
 <style scoped>
 .sidebar {
   width: 270px;
-  min-width: 270px;
+  min-width: 0;
   height: 100vh;
   background: #1a1a2e;
   color: #ccc;
   display: flex;
   flex-direction: column;
-  transition: width 0.2s ease, min-width 0.2s ease;
+  position: relative;
   overflow: hidden;
 }
 
-.sidebar.collapsed {
-  width: 60px;
-  min-width: 60px;
+.sidebar.transitioning {
+  transition: width 0.2s ease;
 }
 
 .sidebar-header {
@@ -428,8 +480,7 @@ onUnmounted(() => {
 .collapse-btn {
   position: absolute;
   right: -8px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 60px;
   z-index: 10;
   background: #2a2a4e;
   border: 1px solid #3a3a5e;
@@ -447,10 +498,24 @@ onUnmounted(() => {
 
 .collapse-btn:hover {
   color: white;
+  background: #3a3a5e;
+}
+
+.resize-handle {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.resize-handle:hover {
+  background: rgba(79, 195, 247, 0.3);
 }
 
 .btn-new {
-  flex: 1;
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
@@ -567,7 +632,7 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.sidebar.collapsed .sidebar-item:hover .tooltip {
+.sidebar-item:hover .tooltip {
   display: block;
 }
 
@@ -581,6 +646,28 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 24px;
   text-align: center;
+}
+
+/* Settings Overlay */
+.settings-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.settings-panel {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* Modal */
@@ -779,25 +866,4 @@ onUnmounted(() => {
 }
 
 .btn-primary:hover:not(:disabled) { background: #0d0d1a; }
-
-.settings-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.settings-panel {
-  background: #f5f5f5;
-  border-radius: 12px;
-  padding: 24px;
-  width: 90%;
-  max-width: 700px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
 </style>
