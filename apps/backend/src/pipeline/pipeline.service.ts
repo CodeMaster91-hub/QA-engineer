@@ -341,15 +341,26 @@ export class PipelineService {
     if (result.status === 'completed') {
       const nextStage = this.workflowEngine.getNextStage(stage);
       if (nextStage) {
-        pipeline.currentStage = nextStage;
-        await this.pipelineRepository.save(pipeline);
+        const nextResult = pipeline.stageResults[nextStage];
+        const nextStatus = nextResult?.status;
 
-        await this.pipelineQueue.add({
-          pipelineId: pipeline.id,
-          featureId: pipeline.featureId,
-          featureSlug,
-          stage: nextStage,
-        });
+        if (nextStatus === 'completed' || nextStatus === 'waiting_for_qa' || nextStatus === 'blocked') {
+          pipeline.currentStage = nextStage;
+          pipeline.status = PipelineStatus.WAITING_FOR_QA;
+          pipeline.blockedStage = nextStage;
+          await this.pipelineRepository.save(pipeline);
+          this.logger.log(`Stage ${stage} completed, restored ${nextStage} status (not re-running)`);
+        } else {
+          pipeline.currentStage = nextStage;
+          await this.pipelineRepository.save(pipeline);
+
+          await this.pipelineQueue.add({
+            pipelineId: pipeline.id,
+            featureId: pipeline.featureId,
+            featureSlug,
+            stage: nextStage,
+          });
+        }
       } else {
         pipeline.status = PipelineStatus.COMPLETED;
         await this.pipelineRepository.save(pipeline);
