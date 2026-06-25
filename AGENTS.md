@@ -29,6 +29,7 @@ apps/
 └── frontend/src/
     ├── api/            - API client (fetch, не axios) и типы
     ├── components/     - Vue компоненты
+    │   ├── Sidebar.vue - Левое меню (список фич, SSE, collapse)
     │   ├── stages/     - Stage-компоненты (Requirements, TestPlan, TestCases, etc.)
     │   └── __tests__/  - Тесты компонентов
     ├── composables/    - Vue composables (useSse)
