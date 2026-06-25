@@ -549,8 +549,8 @@ onUnmounted(() => {
 
 <style scoped>
 .feature-detail {
-  padding: 20px 0;
-  scrollbar-gutter: stable;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .loading-state,
@@ -628,7 +628,7 @@ onUnmounted(() => {
   padding: 20px;
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .pipeline-row {

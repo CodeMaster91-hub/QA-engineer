@@ -10,16 +10,18 @@ const router = createRouter({
     {
       path: '/features',
       name: 'features',
-      component: () => import('@/views/FeaturesView.vue'),
+      redirect: () => {
+        const slug = localStorage.getItem('lastFeatureSlug')
+        return slug ? `/features/${slug}` : '/features'
+      },
     },
     {
       path: '/features/:slug',
       name: 'feature-detail',
       component: () => import('@/views/FeatureDetailView.vue'),
-    },
-    {
-      path: '/pipeline',
-      redirect: '/features',
+      beforeEnter: (to) => {
+        localStorage.setItem('lastFeatureSlug', to.params.slug as string)
+      },
     },
     {
       path: '/settings',
