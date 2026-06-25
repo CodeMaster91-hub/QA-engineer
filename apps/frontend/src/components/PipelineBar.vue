@@ -136,6 +136,7 @@ const connectorClass = (status: string) => {
   box-shadow: 0 0 0 4px #1068bf22;
   outline: 2px solid #1068bf;
   outline-offset: -2px;
+  padding: 8px 12px;
 }
 
 .pipeline-stage:hover .stage-label {
@@ -164,7 +165,7 @@ const connectorClass = (status: string) => {
 
 .restart-overlay {
   position: absolute;
-  inset: -4px;
+  inset: -2px;
   background: #dbdbdb;
   border-radius: 50%;
   display: flex;
