@@ -186,7 +186,7 @@ const pipelineStages = computed(() => {
   return PIPELINE_STAGES_UI.map((stageUI) => {
     const backendStage = stageUI.backendStage
     const result = backendStage ? pipeline.value!.stageResults?.[backendStage] : null
-    let status: 'created' | 'running' | 'success' | 'failed' | 'canceled' | 'blocked' | 'waiting' | 'paused' = 'created'
+    let status: 'queued' | 'running' | 'success' | 'failed' | 'canceled' | 'blocked' | 'paused' = 'queued'
 
     if (result) {
       if (result.status === 'completed' || result.status === 'waiting_for_qa') {
@@ -227,7 +227,7 @@ const pipelineStages = computed(() => {
         status = 'running'
       }
       if (stageUI.key === 'coverage_audited') {
-        status = 'waiting'
+        status = 'queued'
       }
     }
 

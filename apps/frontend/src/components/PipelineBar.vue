@@ -37,20 +37,19 @@
           <path d="M5 8H11" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
 
-        <svg v-else-if="stageObj.status === 'waiting'" class="stage-icon" viewBox="0 0 16 16" width="16" height="16">
-          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
-          <circle cx="8" cy="5" r="1" fill="currentColor"/>
-          <circle cx="8" cy="8" r="1" fill="currentColor"/>
-          <circle cx="8" cy="11" r="1" fill="currentColor"/>
+        <svg v-else-if="stageObj.status === 'queued'" class="stage-icon" viewBox="0 0 16 16" width="16" height="16">
+          <circle cx="8" cy="8" r="7" fill="currentColor"/>
+          <path d="M13.5 2.5 A7 7 0 0 0 5.5 2.5 L8 8Z" fill="white"/>
         </svg>
 
         <svg v-else class="stage-icon" viewBox="0 0 16 16" width="16" height="16">
-          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="8" cy="8" r="7" fill="currentColor"/>
+          <path d="M13.5 2.5 A7 7 0 0 0 5.5 2.5 L8 8Z" fill="white"/>
         </svg>
 
         <!-- Restart overlay on hover -->
         <div
-          v-if="hoveredStage === stageObj.key && stageObj.status !== 'created'"
+          v-if="hoveredStage === stageObj.key"
           class="restart-overlay"
           @click.stop="$emit('restart:stage', stageObj.key)"
           title="Перезапустить этап"
@@ -75,7 +74,7 @@ import { ref } from 'vue'
 export interface StageInfo {
   key: string
   label: string
-  status: 'created' | 'running' | 'success' | 'failed' | 'canceled' | 'blocked' | 'waiting' | 'paused'
+  status: 'queued' | 'running' | 'success' | 'failed' | 'canceled' | 'blocked' | 'paused'
 }
 
 defineProps<{
@@ -98,7 +97,7 @@ const statusClass = (status: string) => {
     'status-failed': status === 'failed',
     'status-canceled': status === 'canceled',
     'status-blocked': status === 'blocked',
-    'status-waiting': status === 'waiting',
+    'status-queued': status === 'queued',
   }
 }
 
@@ -188,7 +187,7 @@ const connectorClass = (status: string) => {
 .status-failed { color: #dd2b0e; }
 .status-canceled { color: #dbdbdb; }
 .status-blocked { color: #f59e0b; }
-.status-waiting { color: #8b5cf6; }
+.status-queued { color: #1068bf; }
 
 .stage-label {
   font-size: 0.75em;
