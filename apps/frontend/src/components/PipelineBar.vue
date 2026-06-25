@@ -119,6 +119,7 @@ const connectorClass = (status: string) => {
   gap: 0;
   padding: 16px 0;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .pipeline-stage {
