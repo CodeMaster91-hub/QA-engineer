@@ -59,7 +59,7 @@ npm run lint          - Проверка стиля кода
 
 ## Pipeline
 
-Backend: 9 stages, UI: 8 stages (без `new`). Этап `new` не отображается в UI.
+Backend: 9 stages, UI: 7 stages (без `new` и `source_ingested`). Этапы `new` и `source_ingested` не отображаются в UI.
 
 ```
 new → source_ingested → requirements_extracted → test_plan_created
