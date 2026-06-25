@@ -734,13 +734,13 @@ onUnmounted(() => {
 }
 
 .btn-approve {
-  background: #8b5cf6;
+  background: #764982;
   color: white;
-  border-color: #8b5cf6;
+  border-color: #764982;
 }
 
 .btn-approve:hover {
-  background: #7c3aed;
+  background: #8a5a96;
 }
 
 .stage-content {
