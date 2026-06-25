@@ -127,16 +127,16 @@ const connectorClass = (status: string) => {
   gap: 6px;
   position: relative;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 8px 12px;
   border-radius: 16px;
-  transition: all 0.2s ease;
+  outline: 2px solid transparent;
+  transition: outline-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .pipeline-stage.selected {
   box-shadow: 0 0 0 4px #1068bf22;
-  outline: 2px solid #1068bf;
+  outline-color: #1068bf;
   outline-offset: -2px;
-  padding: 8px 12px;
 }
 
 .pipeline-stage:hover .stage-label {
