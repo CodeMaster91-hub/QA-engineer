@@ -93,12 +93,9 @@
           <p>Этап выполняется...</p>
         </div>
         <template v-else>
-        <SourceStage
-          v-if="selectedStage === 'source_ingested'"
-          :artifact="getArtifact('source')"
-        />
         <RequirementsStage
-          v-else-if="selectedStage === 'requirements_extracted'"
+          v-if="selectedStage === 'requirements_extracted'"
+          :source-artifact="getArtifact('source')"
           :artifact="getArtifact('requirements')"
           :questions="pipeline?.questions || []"
           @answer="onAnswerQuestions"
@@ -158,7 +155,6 @@ import { api } from '@/api/client'
 import PipelineBar from '@/components/PipelineBar.vue'
 import LogViewer from '@/components/LogViewer.vue'
 import TestRailPublishDialog from '@/components/TestRailPublishDialog.vue'
-import SourceStage from '@/components/stages/SourceStage.vue'
 import RequirementsStage from '@/components/stages/RequirementsStage.vue'
 import TestPlanStage from '@/components/stages/TestPlanStage.vue'
 import TestCasesStage from '@/components/stages/TestCasesStage.vue'
@@ -204,6 +200,10 @@ const pipelineStages = computed(() => {
       } else if (result.status === 'blocked') {
         status = 'paused'
       } else {
+        status = 'running'
+      }
+    } else if (stageUI.key === 'requirements_extracted' && pipeline.value!.currentStage === 'source_ingested') {
+      if (pipeline.value!.status === 'running') {
         status = 'running'
       }
     } else if (backendStage && pipeline.value!.currentStage === backendStage) {
@@ -525,7 +525,7 @@ const loadAll = async () => {
     if (!selectedStage.value && pipeline.value) {
       const currentStage = pipeline.value.currentStage
       const stageUI = PIPELINE_STAGES_UI.find(s => s.backendStage === currentStage)
-      selectedStage.value = stageUI?.key || 'source_ingested'
+      selectedStage.value = stageUI?.key || 'requirements_extracted'
     }
   } catch (e: any) {
     error.value = e.message || 'Failed to load feature'

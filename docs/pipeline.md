@@ -27,14 +27,13 @@ Backend имеет 9 этапов, UI показывает 8 (без `new`):
 
 | UI Stage | Backend Stage | Артефакт | Формат рендера |
 |----------|---------------|----------|----------------|
-| Source | source_ingested | source | markdown → HTML |
-| Requirements | requirements_extracted | requirements | JSON → таблица |
-| Test Plan | test_plan_created | testplan | markdown → HTML |
-| Test Cases | test_cases_created | testcases | JSON → таблица |
-| Coverage | coverage_audited | coverage | JSON + markdown matrix |
-| Review | review | review | JSON → карточки |
-| Dry Run | dry_run_completed | dry_run | JSON → результаты |
-| Published | published | — | Текст + кнопка |
+| Требования | requirements_extracted | source + requirements | Split-screen: источник + таблица |
+| Тест-план | test_plan_created | testplan | markdown → HTML |
+| Тест-кейсы | test_cases_created | testcases | JSON → таблица |
+| Покрытие | coverage_audited | coverage | JSON + markdown matrix |
+| Ревью | review | review | JSON → карточки |
+| Пробный запуск | dry_run_completed | dry_run | JSON → результаты |
+| Опубликовано | published | — | Текст + кнопка |
 
 ### Маппинг UI → Backend
 

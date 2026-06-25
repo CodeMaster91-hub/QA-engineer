@@ -39,14 +39,13 @@ export interface PipelineStageUI {
 }
 
 export const PIPELINE_STAGES_UI: PipelineStageUI[] = [
-  { key: 'source_ingested',        label: 'Source',           backendStage: 'source_ingested' },
-  { key: 'requirements_extracted', label: 'Requirements',     backendStage: 'requirements_extracted' },
-  { key: 'test_plan',              label: 'Test Plan',        backendStage: 'test_plan_created', artifactType: 'testplan' },
-  { key: 'test_cases',             label: 'Test Cases',       backendStage: 'test_cases_created', artifactType: 'testcases' },
-  { key: 'coverage_audited',       label: 'Coverage',         backendStage: 'coverage_audited' },
-  { key: 'review',                 label: 'Review',           backendStage: 'review' },
-  { key: 'dry_run_completed',      label: 'Dry Run',          backendStage: 'dry_run_completed' },
-  { key: 'published',              label: 'Published',        backendStage: 'published' },
+  { key: 'requirements_extracted', label: 'Требования',       backendStage: 'requirements_extracted' },
+  { key: 'test_plan',              label: 'Тест-план',        backendStage: 'test_plan_created', artifactType: 'testplan' },
+  { key: 'test_cases',             label: 'Тест-кейсы',       backendStage: 'test_cases_created', artifactType: 'testcases' },
+  { key: 'coverage_audited',       label: 'Покрытие',         backendStage: 'coverage_audited' },
+  { key: 'review',                 label: 'Ревью',            backendStage: 'review' },
+  { key: 'dry_run_completed',      label: 'Пробный запуск',   backendStage: 'dry_run_completed' },
+  { key: 'published',              label: 'Опубликовано',     backendStage: 'published' },
 ];
 
 export interface PipelineQuestion {
