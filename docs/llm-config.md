@@ -2,23 +2,25 @@
 
 Конфигурация AI-моделей для пайплайна QA-платформы.
 
-## Алиасы моделей
-
-Используйте алиасы для работы с LLM. Каждый провайдер определяет свои алиасы.
-
-**Примеры алиасов:**
-
-| Алиас | Назначение |
-|-------|-----------|
-| `default` | Модель по умолчанию |
-| `smart` | Умная модель (сложные задачи) |
-| `fast` | Быстрая модель (простые задачи) |
-| `dev` | Для разработки |
-| `prod` | Для продакшена |
-
-**Важно:** Не используйте конкретные имена физических моделей. Алиасы - точка совместимости.
-
 ## Модель
+
+### LLM_MODEL (основная)
+
+Одна переменная для всех стадий пайплайна:
+
+```env
+LLM_MODEL=your-model-id
+```
+
+Если `LLM_MODEL` задана, она используется как модель по умолчанию для всех этапов.
+
+### Приоритет разрешения модели
+
+```
+LLM_ALIAS_<STAGE> (override для стадии)
+  → LLM_MODEL (основная модель)
+    → LLM_DEFAULT_ALIAS (legacy fallback)
+```
 
 ### AgentConfig
 
@@ -26,18 +28,19 @@
 |------|-----|----------|
 | id | uuid | Идентификатор |
 | stage | enum | Этап пайплайна |
-| alias | string | Алиас модели |
+| alias | string | Модель (алиас) |
 | provider | string | Провайдер |
 | temperature | decimal | Температура (0-2) |
 | maxTokens | int | Макс. токенов |
 | enabled | boolean | Включена ли конфигурация |
 
 **Этапы пайплайна:**
-- `requirements_extracted` - Извлечение требований
-- `draft_created` - Создание черновика
-- `coverage_audited` - Аудит покрытия
-- `review` - Ревью
-- `dry_run` - Пробный запуск
+- `requirements_extracted` — Извлечение требований
+- `test_plan_created` — Создание тест-плана
+- `test_cases_created` — Создание тест-кейсов
+- `coverage_audited` — Аудит покрытия
+- `review` — Ревью
+- `dry_run_completed` — Пробный запуск
 
 ## Endpoints
 
@@ -54,7 +57,7 @@
 **Request Body:**
 ```json
 {
-  "alias": "smart",
+  "alias": "your-model-id",
   "temperature": 0.2,
   "maxTokens": 8192,
   "enabled": true
@@ -71,9 +74,9 @@
 ```json
 [
   {
-    "id": "custom",
-    "name": "Custom LLM",
-    "aliases": ["default", "smart", "fast"]
+    "id": "your-provider-id",
+    "name": "Your Provider",
+    "aliases": ["your-model-id"]
   }
 ]
 ```
@@ -83,12 +86,13 @@
 | Этап | Temperature | MaxTokens |
 |------|-------------|-----------|
 | requirements_extracted | 0.1 | 4096 |
-| draft_created | 0.2 | 8192 |
+| test_plan_created | 0.2 | 8192 |
+| test_cases_created | 0.2 | 8192 |
 | coverage_audited | 0.2 | 4096 |
 | review | 0.1 | 4096 |
-| dry_run | 0.1 | 4096 |
+| dry_run_completed | 0.1 | 4096 |
 
-Алиасы для каждого этапа настраиваются через ENV переменные.
+При запуске сервера конфиги синхронизируются из ENV переменных (seed + sync).
 
 ## ENV переменные
 
@@ -96,19 +100,23 @@
 # LLM Provider
 LLM_BASE_URL=https://your-llm-provider.com/v1
 LLM_API_KEY=your-api-key
-LLM_MOCK=true
+LLM_MODEL=your-model-id
+LLM_MOCK=false
 
 # LLM Provider Info
-LLM_PROVIDER_ID=custom
-LLM_PROVIDER_NAME=Custom LLM
+LLM_PROVIDER_ID=your-provider-id
+LLM_PROVIDER_NAME=Your Provider
 
-# LLM Model Aliases
-LLM_DEFAULT_ALIAS=default
-LLM_ALIAS_REQUIREMENTS=default
-LLM_ALIAS_DRAFT=default
-LLM_ALIAS_COVERAGE=default
-LLM_ALIAS_REVIEW=default
-LLM_ALIAS_DRY_RUN=default
+# Per-stage override (опционально, fallback → LLM_MODEL)
+LLM_ALIAS_REQUIREMENTS=your-model-id
+LLM_ALIAS_TEST_PLAN=your-model-id
+LLM_ALIAS_TEST_CASES=your-model-id
+LLM_ALIAS_COVERAGE=your-model-id
+LLM_ALIAS_REVIEW=your-model-id
+LLM_ALIAS_DRY_RUN=your-model-id
+
+# Legacy fallback
+LLM_DEFAULT_ALIAS=your-model-id
 ```
 
 ## Интеграция
@@ -117,7 +125,7 @@ LLM_ALIAS_DRY_RUN=default
 
 ```typescript
 import { LLMService } from '../agents/llm.service';
-import { PipelineStage } from '../agents/agent-config.entity';
+import { PipelineStage } from '../pipeline/pipeline.entity';
 
 @Injectable()
 export class PipelineService {
@@ -138,22 +146,24 @@ export class PipelineService {
 
 ## Примеры конфигурации
 
-### Для вашего LLM провайдера
+### OpenRouter (пример)
 
-1. Узнайте доступные алиасы у вашего провайдера
-2. Настройте ENV переменные:
 ```env
-LLM_BASE_URL=https://your-provider.com/v1
-LLM_API_KEY=your-key
-LLM_DEFAULT_ALIAS=your-default-alias
-LLM_ALIAS_REQUIREMENTS=your-smart-alias
-LLM_ALIAS_DRAFT=your-fast-alias
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=sk-or-v1-...
+LLM_MODEL=your-model-id
 ```
 
-3. При необходимости обновите конфигурацию через API:
-```bash
-curl -X PATCH http://localhost:3000/api/agents/config/requirements_extracted \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"alias": "your-smart-alias"}'
+### Разные модели для разных этапов
+
+```env
+LLM_MODEL=your-default-model
+LLM_ALIAS_REQUIREMENTS=your-smart-model
+LLM_ALIAS_TEST_PLAN=your-fast-model
+```
+
+### Dev-режим (mock)
+
+```env
+LLM_MOCK=true
 ```

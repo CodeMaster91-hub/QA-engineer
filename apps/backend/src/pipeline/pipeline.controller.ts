@@ -69,4 +69,13 @@ export class PipelineController {
   ) {
     return this.pipelineService.restartStage(slug, stage);
   }
+
+  @Post(':slug/fill-gaps')
+  @HttpCode(HttpStatus.OK)
+  async fillGaps(
+    @Param('slug') slug: string,
+    @Body('gaps') gaps: string[],
+  ) {
+    return this.pipelineService.fillGaps(slug, gaps);
+  }
 }

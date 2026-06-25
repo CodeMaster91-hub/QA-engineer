@@ -30,7 +30,16 @@
     <div v-else class="empty">Нет данных покрытия</div>
 
     <div v-if="coverageGaps?.length" class="coverage-gaps">
-      <h4>Пробелы в покрытии</h4>
+      <div class="gaps-header">
+        <h4>Пробелы в покрытии</h4>
+        <button
+          class="btn-fill-gaps"
+          @click="$emit('fill-gaps')"
+          :disabled="filling"
+        >
+          {{ filling ? 'Генерация...' : '🔧 Дополнить тест-кейсы' }}
+        </button>
+      </div>
       <ul>
         <li v-for="(gap, idx) in coverageGaps" :key="idx">{{ gap }}</li>
       </ul>
@@ -46,6 +55,11 @@ import { renderMarkdown } from '@/utils/markdown'
 const props = defineProps<{
   artifact: Artifact | null
   coverageGaps?: string[] | null
+  filling?: boolean
+}>()
+
+defineEmits<{
+  'fill-gaps': []
 }>()
 
 const coverageMatrix = computed(() => props.artifact?.content?.coverage_matrix_markdown || '')
@@ -149,5 +163,35 @@ th {
   color: #999;
   text-align: center;
   padding: 40px;
+}
+
+.gaps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.btn-fill-gaps {
+  padding: 4px 12px;
+  border: 1px solid #1068bf;
+  border-radius: 4px;
+  background: white;
+  color: #1068bf;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-fill-gaps:hover:not(:disabled) {
+  background: #1068bf;
+  color: white;
+}
+
+.btn-fill-gaps:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

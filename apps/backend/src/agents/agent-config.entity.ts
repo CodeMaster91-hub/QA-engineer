@@ -5,15 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { PipelineStage } from '../pipeline/pipeline.entity';
 
-export enum PipelineStage {
-  REQUIREMENTS_EXTRACTED = 'requirements_extracted',
-  TEST_PLAN_CREATED = 'test_plan_created',
-  TEST_CASES_CREATED = 'test_cases_created',
-  COVERAGE_AUDITED = 'coverage_audited',
-  REVIEW = 'review',
-  DRY_RUN = 'dry_run',
-}
+export { PipelineStage };
 
 @Entity('agent_configs')
 export class AgentConfig {

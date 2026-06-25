@@ -28,9 +28,9 @@ export function useSse(featureId: string) {
     const url = `/api/events/stream/${featureId}${sinceParam}`;
     eventSource = new EventSource(url);
 
-    eventSource.onmessage = (e) => {
+    const handleSseMessage = (rawData: string) => {
       try {
-        const raw = JSON.parse(e.data);
+        const raw = JSON.parse(rawData);
         const event: SseEvent = {
           type: raw.type,
           data: raw.data,
@@ -38,7 +38,6 @@ export function useSse(featureId: string) {
           id: raw.id,
         };
 
-        // Обновить lastEventTimestamp для replay при reconnect
         if (event.id) {
           const ts = parseInt(event.id.split('-')[0], 10);
           if (!isNaN(ts) && ts > lastEventTimestamp) {
@@ -47,11 +46,33 @@ export function useSse(featureId: string) {
         }
 
         events.value.push(event);
-        retryDelay = 1000; // Сброс backoff при успешном получении
+        retryDelay = 1000;
       } catch {
         // ignore parse errors
       }
     };
+
+    const eventTypes = [
+      'pipeline:stage-update',
+      'pipeline:progress',
+      'pipeline:blocked',
+      'pipeline:waiting_for_qa',
+      'pipeline:completed',
+      'pipeline:failed',
+      'pipeline:log',
+      'pipeline:fill-gaps-started',
+      'pipeline:fill-gaps-done',
+    ]
+
+    eventTypes.forEach((type) => {
+      eventSource!.addEventListener(type, (e: MessageEvent) => {
+        handleSseMessage(e.data)
+      })
+    })
+
+    eventSource.onmessage = (e) => {
+      handleSseMessage(e.data)
+    }
 
     eventSource.onopen = () => {
       connected.value = true;

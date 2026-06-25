@@ -4,10 +4,10 @@ QA-платформа для автоматизированного тестир
 
 ## Стек
 
-- **Backend**: Nest.js 11 + TypeORM + BullMQ
+- **Backend**: Nest.js 11 + TypeORM
 - **Frontend**: Vue 3 + TypeScript
 - **База данных**: PostgreSQL
-- **Очереди**: Redis (опционально) / In-memory
+- **Очереди**: BullMQ (production) / In-memory (dev)
 - **Аутентификация**: Authentik (OIDC)
 - **Деплой**: Docker + Kubernetes (Helm)
 
@@ -44,10 +44,11 @@ apps/
 │       ├── features/ # Фичи и артефакты
 │       ├── agents/   # AI-агенты и конфигурация
 │       ├── pipeline/ # Оркестрация пайплайнов
-│       ├── queue/    # BullMQ очереди
 │       ├── testrail/ # Интеграция с TestRail
+│       ├── tms/      # TMS адаптеры (TestRail, Zephyr, TestIT, TestLink)
 │       ├── events/   # SSE события
-│       └── health/   # Health check endpoints
+│       ├── health/   # Health check endpoints
+│       └── common/   # InMemoryQueue, Tenant, FileProcessor, UrlFetcher
 └── frontend/         # Vue 3 SPA
 ```
 
@@ -77,6 +78,7 @@ apps/
 |--------|----------|------|----------|
 | GET | /api/features | JWT | Список фич (пагинация) |
 | POST | /api/features | Admin | Создать фичу |
+| POST | /api/features/create-with-source | Public | Создать с источником |
 | GET | /api/features/:slug | JWT | Детали фичи |
 | DELETE | /api/features/:slug | Admin | Удалить фичу |
 | GET | /api/features/:slug/artifacts | JWT | Все артефакты |
@@ -98,15 +100,48 @@ apps/
 ### Pipeline Stages (UI)
 | # | Stage | Описание | Рендер |
 |---|-------|----------|--------|
-| 1 | New | Фича создана | — |
-| 2 | Source | Исходный бандл | markdown → HTML |
-| 3 | Requirements | Требования | JSON → таблица |
-| 4 | Test Plan | Тест план | markdown → HTML |
-| 5 | Test Cases | Тест-кейсы | JSON → таблица |
-| 6 | Coverage | Аудит покрытия | JSON + markdown |
-| 7 | Review | Ревью (hard stop) | JSON + approval |
-| 8 | Dry Run | Пробный запуск | JSON + approval |
-| 9 | Published | Опубликовано | Текст + publish |
+| 1 | Source | Исходный бандл | markdown → HTML |
+| 2 | Requirements | Требования | JSON → таблица |
+| 3 | Test Plan | Тест план | markdown → HTML |
+| 4 | Test Cases | Тест-кейсы | JSON → таблица |
+| 5 | Coverage | Аудит покрытия | JSON + markdown |
+| 6 | Review | Ревью (hard stop) | JSON + approval |
+| 7 | Dry Run | Пробный запуск | JSON + approval |
+| 8 | Published | Опубликовано | Текст + publish |
+
+### Agents
+| Method | Endpoint | Auth | Описание |
+|--------|----------|------|----------|
+| GET | /api/agents/config | JWT | Конфигурация всех этапов |
+| PATCH | /api/agents/config/:stage | Admin | Обновить конфиг этапа |
+| GET | /api/agents/providers | JWT | Доступные провайдеры |
+
+### TestRail
+| Method | Endpoint | Auth | Описание |
+|--------|----------|------|----------|
+| GET | /api/testrail/config | JWT | Настройки по умолчанию |
+| GET | /api/testrail/projects | JWT | Список проектов |
+| GET | /api/testrail/projects/:id/suites | JWT | Список свитов |
+| GET | /api/testrail/projects/:id/suites/:id/sections | JWT | Список секций |
+| POST | /api/testrail/projects/:id/suites/:id/sections | Admin | Создать секцию |
+| POST | /api/testrail/:slug/dry-run | Admin | Пробный publish |
+| POST | /api/testrail/:slug/publish | Admin | Публикация в TestRail |
+| GET | /api/testrail/jobs/:id/status | JWT | Статус задачи |
+
+### TMS
+| Method | Endpoint | Auth | Описание |
+|--------|----------|------|----------|
+| GET | /api/tms/schema | JWT | Схема TMS |
+| GET | /api/tms/providers | JWT | Список провайдеров |
+| GET | /api/tms/projects | JWT | Список проектов |
+| GET | /api/tms/tree/:projectId | JWT | Дерево проекта |
+| POST | /api/tms/publish | Admin | Публикация тест-кейсов |
+
+### Events (SSE)
+| Method | Endpoint | Auth | Описание |
+|--------|----------|------|----------|
+| SSE | /api/events/stream/:featureId | Public | SSE-поток событий |
+| GET | /api/events/health | Public | Health check SSE |
 
 ### Health
 | Method | Endpoint | Описание |
@@ -117,26 +152,26 @@ apps/
 
 ## Переменные окружения
 
-См. `.env` для полного списка. Основные:
+См. `.env.example` для полного списка. Основные:
 
-- `DB_*` - Настройки PostgreSQL
-- `REDIS_*` - Настройки Redis (опционально, см. [redis-optional.md](docs/redis-optional.md))
-- `AUTHENTIK_*` - Authentik OIDC настройки
-- `JWT_SECRET` - Секрет для JWT токенов
-- `LLM_*` - Настройки AI-моделей (LLM_MOCK=true для dev)
-- `TESTRAIL_*` - Настройки TestRail
+- `DB_*` — Настройки PostgreSQL
+- `REDIS_*` — Настройки Redis (опционально)
+- `AUTHENTIK_*` — Authentik OIDC настройки
+- `JWT_SECRET` — Секрет для JWT токенов
+- `LLM_*` — Настройки AI-моделей (`LLM_MOCK=true` для dev)
+- `TESTRAIL_*` — Настройки TestRail
 
 ## Документация
 
-- [Auth API](docs/auth.md) - Аутентификация (Authentik OIDC)
-- [Users API](docs/users.md) - Управление пользователями
-- [Features API](docs/features.md) - Управление фичами и артефактами
-- [LLM Config](docs/llm-config.md) - Конфигурация AI-моделей
-- [Pipeline API](docs/pipeline.md) - Оркестрация пайплайна
-- [TMS API](docs/tms.md) - Интеграция с Test Management System
-- [SSE Events](docs/sse-events.md) - Real-time события
-- [Redis Optional](docs/redis-optional.md) - Конфигурация Redis (опционально)
-- [Multi-tenant](docs/multi-tenant.md) - Multi-tenant архитектура
+- [Auth API](docs/auth.md) — Аутентификация (Authentik OIDC)
+- [Users API](docs/users.md) — Управление пользователями
+- [Features API](docs/features.md) — Управление фичами и артефактами
+- [LLM Config](docs/llm-config.md) — Конфигурация AI-моделей
+- [Pipeline API](docs/pipeline.md) — Оркестрация пайплайна
+- [TMS API](docs/tms.md) — Интеграция с Test Management System
+- [SSE Events](docs/sse-events.md) — Real-time события
+- [Redis Optional](docs/redis-optional.md) — Конфигурация Redis (опционально)
+- [Multi-tenant](docs/multi-tenant.md) — Multi-tenant архитектура
 
 ## Деплой
 

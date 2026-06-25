@@ -90,7 +90,6 @@
       <div class="stage-content" v-if="selectedStage">
         <!-- Processing indicator -->
         <div v-if="isStageProcessing(selectedStage) && !getArtifactForStage(selectedStage)" class="stage-processing">
-          <div class="processing-spinner"></div>
           <p>Этап выполняется...</p>
         </div>
         <template v-else>
@@ -116,6 +115,8 @@
           v-else-if="selectedStage === 'coverage_audited'"
           :artifact="getArtifact('coverage')"
           :coverageGaps="pipeline?.coverageGaps"
+          :filling="fillingGaps"
+          @fill-gaps="onFillGaps"
         />
         <ReviewStage
           v-else-if="selectedStage === 'review'"
@@ -179,6 +180,7 @@ const error = ref('')
 const submitting = ref(false)
 const showTestRailDialog = ref(false)
 const selectedStage = ref<string | null>(null)
+const fillingGaps = ref(false)
 
 const logEntries = ref<Array<{ level: 'info' | 'warn' | 'error'; message: string }>>([])
 
@@ -211,6 +213,21 @@ const pipelineStages = computed(() => {
         status = 'paused'
       } else if (pipeline.value!.status === 'waiting_for_qa' && pipeline.value!.blockedStage === backendStage) {
         status = 'paused'
+      }
+    }
+
+    // If pipeline itself is failed, show failed status for all processed stages
+    if (pipeline.value!.status === 'failed' && result) {
+      status = 'failed'
+    }
+
+    // Override: fill-gaps in progress
+    if (fillingGaps.value) {
+      if (stageUI.key === 'test_cases') {
+        status = 'running'
+      }
+      if (stageUI.key === 'coverage_audited') {
+        status = 'waiting'
       }
     }
 
@@ -378,22 +395,50 @@ const onRestartStage = async (stageKey: string) => {
   }
 }
 
+const onFillGaps = async () => {
+  if (!pipeline.value?.coverageGaps?.length) return
+  fillingGaps.value = true
+  try {
+    await api.post(`/pipeline/${featureSlug.value}/fill-gaps`, { gaps: pipeline.value.coverageGaps })
+  } catch (e: any) {
+    console.error('Failed to fill gaps:', e)
+    fillingGaps.value = false
+  }
+}
+
 const onPublished = (jobId: string) => {
   showTestRailDialog.value = false
   console.log('TestRail publish started:', jobId)
 }
 
 let eventSource: EventSource | null = null
+let pipelineRequestCounter = 0
+let refreshTimeout: ReturnType<typeof setTimeout> | null = null
+
+const scheduleRefresh = () => {
+  if (refreshTimeout) clearTimeout(refreshTimeout)
+  refreshTimeout = setTimeout(refreshPipeline, 200)
+}
+
+const refreshPipeline = () => {
+  const current = ++pipelineRequestCounter
+  loadPipeline().then(async () => {
+    if (current === pipelineRequestCounter) {
+      await loadArtifacts()
+    }
+  })
+}
 
 const initSSE = () => {
   const featureId = feature.value?.id
   if (!featureId) return
 
+  eventSource?.close()
   eventSource = new EventSource(`/api/events/stream/${featureId}`)
 
-  eventSource.onmessage = (e) => {
+  const handleSseMessage = (rawData: string) => {
     try {
-      const msg = JSON.parse(e.data)
+      const msg = JSON.parse(rawData)
 
       switch (msg.type) {
         case 'pipeline:stage-update':
@@ -402,8 +447,16 @@ const initSSE = () => {
         case 'pipeline:waiting_for_qa':
         case 'pipeline:completed':
         case 'pipeline:failed':
-          loadPipeline()
-          loadArtifacts()
+          scheduleRefresh()
+          break
+
+        case 'pipeline:fill-gaps-started':
+          fillingGaps.value = true
+          break
+
+        case 'pipeline:fill-gaps-done':
+          fillingGaps.value = false
+          scheduleRefresh()
           break
 
         case 'pipeline:log':
@@ -412,6 +465,9 @@ const initSSE = () => {
               level: msg.data.level || 'info',
               message: msg.data.message || '',
             })
+            if (msg.data.level === 'info' && msg.data.message?.includes('Completed')) {
+              scheduleRefresh()
+            }
           }
           break
       }
@@ -420,7 +476,31 @@ const initSSE = () => {
     }
   }
 
+  const eventTypes = [
+    'pipeline:stage-update',
+    'pipeline:progress',
+    'pipeline:blocked',
+    'pipeline:waiting_for_qa',
+    'pipeline:completed',
+    'pipeline:failed',
+    'pipeline:log',
+    'pipeline:fill-gaps-started',
+    'pipeline:fill-gaps-done',
+  ]
+
+  eventTypes.forEach((type) => {
+    eventSource!.addEventListener(type, (e: MessageEvent) => {
+      handleSseMessage(e.data)
+    })
+  })
+
+  eventSource.onmessage = (e) => {
+    handleSseMessage(e.data)
+  }
+
   eventSource.onerror = () => {
+    eventSource?.close()
+    eventSource = null
     setTimeout(() => {
       if (feature.value?.id) {
         initSSE()
@@ -637,16 +717,6 @@ onUnmounted(() => {
   justify-content: center;
   padding: 60px 20px;
   color: #666;
-}
-
-.processing-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #1068bf;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 16px;
 }
 
 .logs-section {

@@ -18,16 +18,24 @@ Accept: text/event-stream
 
 ```
 event: pipeline:progress
-data: {"featureId":"...","stage":"requirements_extracted","progress":2,"total":7,"status":"running"}
+id: 1782317725861-y0b103
+data: {"featureId":"...","featureSlug":"my-feature","stage":"test_plan_created","progress":3,"total":9,"status":"running"}
 
 event: pipeline:log
-data: {"featureId":"...","message":"Starting stage: requirements_extracted","level":"info"}
+id: 1782317725861-308410
+data: {"featureId":"...","featureSlug":"my-feature","message":"Starting stage: test_plan_created","level":"info"}
 
 event: pipeline:completed
-data: {"featureId":"...","result":{...}}
+id: 1782317800000-abc123
+data: {"stage":"published","featureSlug":"my-feature"}
 
 event: pipeline:failed
-data: {"featureId":"...","error":"Stage failed"}
+id: 1782317900000-def456
+data: {"stage":"requirements_extracted","error":"Не удалось извлечь требования"}
+
+event: pipeline:waiting_for_qa
+id: 1782318000000-ghi789
+data: {"stage":"coverage_audited","coverageGaps":["REQ-001: нет негативного тест-кейса"]}
 ```
 
 ### GET /api/events/health
@@ -52,9 +60,9 @@ data: {"featureId":"...","error":"Stage failed"}
 {
   "featureId": "uuid",
   "featureSlug": "my-feature",
-  "stage": "requirements_extracted",
-  "progress": 2,
-  "total": 7,
+  "stage": "test_plan_created",
+  "progress": 3,
+  "total": 9,
   "status": "running"
 }
 ```
@@ -65,9 +73,8 @@ data: {"featureId":"...","error":"Stage failed"}
 
 ```json
 {
-  "featureId": "uuid",
-  "featureSlug": "my-feature",
-  "result": { ... }
+  "stage": "published",
+  "featureSlug": "my-feature"
 }
 ```
 
@@ -77,9 +84,8 @@ data: {"featureId":"...","error":"Stage failed"}
 
 ```json
 {
-  "featureId": "uuid",
-  "featureSlug": "my-feature",
-  "error": "Stage failed: LLM timeout"
+  "stage": "requirements_extracted",
+  "error": "Не удалось извлечь требования из документа"
 }
 ```
 
@@ -141,90 +147,50 @@ data: {"featureId":"...","error":"Stage failed"}
 }
 ```
 
+### pipeline:fill-gaps-started
+
+Начало генерации дополнительных тест-кейсов для устранения пробелов.
+
+```json
+{
+  "gapsCount": 8
+}
+```
+
+### pipeline:fill-gaps-done
+
+Завершение генерации дополнительных тест-кейсов.
+
+```json
+{
+  "success": true,
+  "error": null
+}
+```
+
 ## Использование на Frontend
+
+### FeatureDetailView — inline SSE
+
+`FeatureDetailView` использует inline SSE с `addEventListener`, debounce, request counter и auto-reconnect:
+
+- **addEventListener**: ловит все типизированные события NestJS SSE
+- **onmessage**: fallback для событий без типа
+- **Debounce (200мс)**: события группируются, один HTTP-запрос вместо множества
+- **Request counter**: race condition — применяются только данные последнего запроса
+- **Auto-reconnect**: при разрыве — reconnect через 3с
+- **pipeline:log "Completed"**: триггерит обновление pipeline
+- **fill-gaps визуал**: Test Cases = running (спиннер), Coverage = waiting (точки)
 
 ### Composable useSse.ts
 
 ```typescript
-import { ref, onMounted, onUnmounted } from 'vue';
-
-export function useSse(featureId: string, token: string) {
-  const events = ref<any[]>([]);
-  const connected = ref(false);
-  let eventSource: EventSource | null = null;
-
-  const connect = () => {
-    eventSource = new EventSource(
-      `/api/events/stream/${featureId}?token=${token}`
-    );
-
-    eventSource.addEventListener('pipeline:progress', (e) => {
-      const data = JSON.parse(e.data);
-      events.value.push({ type: 'pipeline:progress', data });
-    });
-
-    eventSource.addEventListener('pipeline:log', (e) => {
-      const data = JSON.parse(e.data);
-      events.value.push({ type: 'pipeline:log', data });
-    });
-
-    eventSource.addEventListener('pipeline:completed', (e) => {
-      const data = JSON.parse(e.data);
-      events.value.push({ type: 'pipeline:completed', data });
-    });
-
-    eventSource.addEventListener('pipeline:failed', (e) => {
-      const data = JSON.parse(e.data);
-      events.value.push({ type: 'pipeline:failed', data });
-    });
-
-    eventSource.onopen = () => {
-      connected.value = true;
-    };
-
-    eventSource.onerror = () => {
-      connected.value = false;
-    };
-  };
-
-  const disconnect = () => {
-    eventSource?.close();
-    connected.value = false;
-  };
-
-  onMounted(connect);
-  onUnmounted(disconnect);
-
-  return { events, connected, disconnect };
-}
-```
-
-### Использование в компоненте
-
-```vue
-<script setup lang="ts">
 import { useSse } from '@/composables/useSse';
 
-const { events, connected } = useSse(featureId, token);
-</script>
-
-<template>
-  <div>
-    <div :class="{ online: connected }">
-      {{ connected ? 'Подключено' : 'Отключено' }}
-    </div>
-    
-    <div v-for="event in events" :key="event.timestamp">
-      <template v-if="event.type === 'pipeline:progress'">
-        {{ event.data.stage }}: {{ event.data.progress }}/{{ event.data.total }}
-      </template>
-      <template v-if="event.type === 'pipeline:log'">
-        [{{ event.data.level }}] {{ event.data.message }}
-      </template>
-    </div>
-  </div>
-</template>
+const { events, connected } = useSse(featureId);
 ```
+
+Composable поддерживает exponential backoff при reconnect и replay пропущенных событий через `?since=`.
 
 ## Multi-pod
 

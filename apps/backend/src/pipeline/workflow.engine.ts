@@ -26,6 +26,23 @@ export class WorkflowEngine {
     private featuresService: FeaturesService,
   ) {}
 
+  private parseJsonResponse(content: string): any {
+    let cleaned = content
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('No valid JSON found in LLM response');
+    }
+  }
+
   async executeStage(
     stage: PipelineStage,
     featureSlug: string,
@@ -107,7 +124,7 @@ export class WorkflowEngine {
     const sourceContent = sourceArtifact?.content || {};
 
     const response = await this.llmService.complete(
-      { stage: 'requirements_extracted' } as any,
+      PipelineStage.REQUIREMENTS_EXTRACTED,
       [
         {
           role: 'system',
@@ -124,7 +141,7 @@ export class WorkflowEngine {
 - priority: high|medium|low
 - type: functional|non-functional|constraint
 
-Пример:
+Верни только JSON без markdown-обёртки:
 {
   "requirements": [
     {
@@ -145,10 +162,13 @@ export class WorkflowEngine {
       ],
     );
 
+    this.logger.log(`LLM response [requirements]: ${response.content.substring(0, 200)}`);
+
     let parsed: any;
     try {
-      parsed = JSON.parse(response.content);
+      parsed = this.parseJsonResponse(response.content);
     } catch {
+      this.logger.error(`LLM JSON parse failed [requirements]: ${response.content.substring(0, 500)}`);
       parsed = { requirements: [], open_questions: [] };
     }
 
@@ -219,7 +239,7 @@ export class WorkflowEngine {
     }
 
     const response = await this.llmService.complete(
-      { stage: 'test_plan_created' } as any,
+      PipelineStage.TEST_PLAN_CREATED,
       [
         {
           role: 'system',
@@ -228,7 +248,7 @@ export class WorkflowEngine {
 
 На вход подаётся сводка требований (requirements).
 
-Верни JSON строго по формату:
+Верни только JSON без markdown-обёртки:
 {
   "test_plan_markdown": "# Тест план\n\n## Объём тестирования\n\n## Подход\n\n## Среды\n\n## Риски"
 }`,
@@ -242,7 +262,7 @@ export class WorkflowEngine {
 
     let parsed: any;
     try {
-      parsed = JSON.parse(response.content);
+      parsed = this.parseJsonResponse(response.content);
     } catch {
       parsed = { test_plan_markdown: response.content };
     }
@@ -276,7 +296,7 @@ export class WorkflowEngine {
     }
 
     const response = await this.llmService.complete(
-      { stage: 'test_cases_created' } as any,
+      PipelineStage.TEST_CASES_CREATED,
       [
         {
           role: 'system',
@@ -287,7 +307,7 @@ export class WorkflowEngine {
 
 ВАЖНО: Если в требованиях есть неясности — добавь их в поле needs_clarification в каждом кейсе, но НЕ блокируй генерацию.
 
-Верни JSON строго по формату:
+Верни только JSON без markdown-обёртки:
 {
   "cases": [
     {
@@ -319,7 +339,7 @@ export class WorkflowEngine {
 
     let parsed: any;
     try {
-      parsed = JSON.parse(response.content);
+      parsed = this.parseJsonResponse(response.content);
     } catch {
       parsed = { cases: [] };
     }
@@ -365,18 +385,26 @@ export class WorkflowEngine {
     }
 
     const response = await this.llmService.complete(
-      { stage: 'coverage_audited' } as any,
+      PipelineStage.COVERAGE_AUDITED,
       [
         {
           role: 'system',
           content: `Проведи аудит покрытия требований тест-кейсами.
 
-ВАЖНО: Если есть требования, которые не покрыты тест-кейсами — добавь их описание в поле gaps.
+Для каждого требования укажи статус покрытия: Covered, Partially Covered или Not Covered.
+Перечисли тест-кейсы, которые покрывают каждое требование.
+
+Если есть требования, которые не покрыты тест-кейсами — добавь их описание в поле gaps.
 Формат gaps: ["REQ-001: нет негативного тест-кейса", "REQ-003: не проверяется boundary case"]
 
-Верни JSON:
+Верни только JSON без markdown-обёртки:
 {
-  "coverage": { ... },
+  "coverage": {
+    "requirements_coverage": [
+      { "requirement_id": "REQ-001", "status": "Covered", "covered_by": ["TC-001", "TC-002"] }
+    ]
+  },
+  "coverage_matrix_markdown": "| REQ | Status | Covered by |\n|-----|--------|------------|\n| REQ-001 | Covered | TC-001 |",
   "gaps": ["...", "..."]
 }`,
         },
@@ -392,7 +420,7 @@ export class WorkflowEngine {
 
     let parsed: any;
     try {
-      parsed = JSON.parse(response.content);
+      parsed = this.parseJsonResponse(response.content);
     } catch {
       parsed = { coverage: {}, gaps: [] };
     }
@@ -451,12 +479,12 @@ export class WorkflowEngine {
     );
 
     const response = await this.llmService.complete(
-      { stage: 'review' } as any,
+      PipelineStage.REVIEW,
       [
         {
           role: 'system',
           content:
-            'Проведи ревью тест-кейсов. Проверь качество, полноту, корректность. Верни JSON с результатами ревью.',
+            'Проведи ревью тест-кейсов. Проверь качество, полноту, корректность. Верни только JSON без markdown-обёртки с результатами ревью.',
         },
         {
           role: 'user',
@@ -470,7 +498,7 @@ export class WorkflowEngine {
 
     let parsed: any;
     try {
-      parsed = JSON.parse(response.content);
+      parsed = this.parseJsonResponse(response.content);
     } catch {
       parsed = { review: response.content };
     }
@@ -510,12 +538,12 @@ export class WorkflowEngine {
     }
 
     const response = await this.llmService.complete(
-      { stage: 'dry_run' } as any,
+      PipelineStage.DRY_RUN_COMPLETED,
       [
         {
           role: 'system',
           content:
-            'Выполни пробный запуск тест-кейсов. Верни JSON с результатами.',
+            'Выполни пробный запуск тест-кейсов. Верни только JSON без markdown-обёртки с результатами.',
         },
         {
           role: 'user',
@@ -526,7 +554,7 @@ export class WorkflowEngine {
 
     let parsed: any;
     try {
-      parsed = JSON.parse(response.content);
+      parsed = this.parseJsonResponse(response.content);
     } catch {
       parsed = { dryRun: response.content };
     }
@@ -553,6 +581,151 @@ export class WorkflowEngine {
     return {
       message: 'Pipeline completed. Ready for TestRail publish.',
     };
+  }
+
+  async fillGaps(
+    featureId: string,
+    gaps: string[],
+  ): Promise<StageResult> {
+    const requirementsArtifact = await this.featuresService.getArtifact(
+      featureId,
+      ArtifactType.REQUIREMENTS,
+    );
+    const testcasesArtifact = await this.featuresService.getArtifact(
+      featureId,
+      ArtifactType.TESTCASES,
+    );
+
+    if (!requirementsArtifact || !requirementsArtifact.content?.requirements?.length) {
+      return {
+        stage: PipelineStage.COVERAGE_AUDITED,
+        status: 'failed',
+        error: 'Требования не найдены',
+        timestamp: new Date(),
+      };
+    }
+    if (!testcasesArtifact || !testcasesArtifact.content?.cases?.length) {
+      return {
+        stage: PipelineStage.COVERAGE_AUDITED,
+        status: 'failed',
+        error: 'Тест-кейсы не найдены',
+        timestamp: new Date(),
+      };
+    }
+
+    const existingCases = testcasesArtifact.content.cases;
+    const maxExistingId = this.extractMaxCaseId(existingCases);
+
+    const response = await this.llmService.complete(
+      PipelineStage.TEST_CASES_CREATED,
+      [
+        {
+          role: 'system',
+          content: `Ты агент Test Case Designer.
+Аудит покрытия выявил пробелы — нужны дополнительные тест-кейсы.
+
+Задача: для каждого пробела создай один тест-кейс.
+Не дублируй существующие кейсы.
+
+Формат каждого тест-кейса:
+- id: TC-### (используй нумерацию начиная с ${maxExistingId + 1})
+- title: краткое название
+- section: секция
+- priority: high|medium|low
+- type: positive|negative|boundary|validation|permission|integration|regression
+- status: draft
+- automation_candidate: true
+- preconditions: условия
+- steps: [{ action, expected }]
+- final_expected_result: ожидаемый результат
+- requirement_ids: ["REQ-001"]
+- test_data: []
+- tags: []
+
+Верни только JSON без markdown-обёртки:
+{ "cases": [новые тест-кейсы] }`,
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            requirements: requirementsArtifact.content,
+            gaps,
+            existingCaseCount: existingCases.length,
+          }),
+        },
+      ],
+    );
+
+    let parsed: any;
+    try {
+      parsed = this.parseJsonResponse(response.content);
+    } catch {
+      this.logger.error(`LLM JSON parse failed [fill-gaps]: ${response.content.substring(0, 500)}`);
+      return {
+        stage: PipelineStage.COVERAGE_AUDITED,
+        status: 'failed',
+        error: 'LLM не сгенерировал тест-кейсы для пробелов',
+        timestamp: new Date(),
+      };
+    }
+
+    const newCases = parsed.cases || [];
+    if (newCases.length === 0) {
+      return {
+        stage: PipelineStage.COVERAGE_AUDITED,
+        status: 'failed',
+        error: 'LLM не вернул тест-кейсы',
+        timestamp: new Date(),
+      };
+    }
+
+    // Merge: existing + new, fix ID collisions
+    const merged = this.mergeCases(existingCases, newCases, maxExistingId);
+
+    await this.featuresService.upsertArtifact(
+      featureId,
+      ArtifactType.TESTCASES,
+      { cases: merged },
+    );
+
+    this.logger.log(`Fill gaps: added ${newCases.length} cases, total: ${merged.length}`);
+
+    // Auto-reaudit coverage
+    return this.auditCoverage(featureId, {});
+  }
+
+  private extractMaxCaseId(cases: any[]): number {
+    let max = 0;
+    for (const c of cases) {
+      const match = (c.id || '').match(/TC-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > max) max = num;
+      }
+    }
+    return max;
+  }
+
+  private mergeCases(existing: any[], newCases: any[], maxId: number): any[] {
+    const usedIds = new Set<string>();
+    const merged = existing.map((c) => {
+      usedIds.add(c.id);
+      return c;
+    });
+
+    let nextId = maxId + 1;
+    for (const nc of newCases) {
+      let id = `TC-${String(nextId).padStart(3, '0')}`;
+      while (usedIds.has(id)) {
+        nextId++;
+        id = `TC-${String(nextId).padStart(3, '0')}`;
+      }
+      usedIds.add(id);
+      merged.push({ ...nc, id, status: 'draft' });
+      nextId++;
+    }
+
+    return merged;
   }
 
   getNextStage(currentStage: PipelineStage): PipelineStage | null {

@@ -7,7 +7,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { PipelineStage } from '../agent-config.entity';
+import { PipelineStage } from '../../pipeline/pipeline.entity';
 
 export class UpdateAgentConfigDto {
   @IsOptional()

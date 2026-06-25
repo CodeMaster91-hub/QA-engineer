@@ -2,7 +2,7 @@
 
 ## Контекст проекта
 
-QA-платформа для автоматизированного тестирования требований. Стек: Nest.js 11 + Vue 3 + PostgreSQL + Redis (BullMQ).
+QA-платформа для автоматизированного тестирования требований. Стек: Nest.js 11 + Vue 3 + PostgreSQL + BullMQ (production) / In-memory queue (dev).
 
 ## Ключевые принципы
 
@@ -20,14 +20,14 @@ apps/
 │   ├── users/          - Управление пользователями
 │   ├── features/       - Фичи и артефакты
 │   ├── agents/         - AI-агенты и конфигурация
-│   ├── pipeline/       - Оркестрация пайплайнов
+│   ├── pipeline/       - Оркестрация пайплайнов (PipelineStage enum — единый источник)
 │   ├── testrail/       - Интеграция с TestRail
 │   ├── tms/            - TMS адаптеры (TestRail, Zephyr, TestIT, TestLink)
 │   ├── events/         - SSE события
 │   ├── health/         - Health check
-│   └── common/         - Queue, Tenant, FileProcessor, UrlFetcher
+│   └── common/         - InMemoryQueue, Tenant, FileProcessor, UrlFetcher
 └── frontend/src/
-    ├── api/            - API client и типы
+    ├── api/            - API client (fetch, не axios) и типы
     ├── components/     - Vue компоненты
     │   ├── stages/     - Stage-компоненты (Source, Requirements, TestPlan, etc.)
     │   └── __tests__/  - Тесты компонентов
@@ -55,10 +55,16 @@ npm run lint          - Проверка стиля кода
 - ENV vars: `UPPER_SNAKE_CASE`
 - Vue components: `PascalCase.vue`
 - Stage components: `[StageName]Stage.vue`
+- **PipelineStage enum**: единый `pipeline/pipeline.entity.ts`, импортировать отовсюду
 
 ## Pipeline
 
-Backend: 9 stages, UI: 9 stages (test_plan_created → testplan, test_cases_created → testcases). Этап `new` не отображается в UI.
+Backend: 9 stages, UI: 8 stages (без `new`). Этап `new` не отображается в UI.
+
+```
+new → source_ingested → requirements_extracted → test_plan_created
+→ test_cases_created → coverage_audited → review → dry_run_completed → published
+```
 
 Статусы: `idle`, `running`, `blocked`, `waiting_for_qa`, `paused`, `completed`, `failed`, `cancelled`.
 
@@ -74,7 +80,15 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 |-----|--------|--------|
 | source | `{ text, images }` | markdown → HTML |
 | requirements | `{ requirements: [] }` | JSON → таблица |
-| testcases | `{ test_plan_markdown, cases: [] }` | markdown + JSON → таблица |
+| testplan | `{ test_plan_markdown }` | markdown → HTML |
+| testcases | `{ cases: [] }` | JSON → таблица |
 | coverage | `{ coverage, coverage_matrix_markdown, gaps }` | JSON + markdown |
 | review | `{ ... }` | JSON |
 | dry_run | `{ ... }` | JSON |
+
+## LLM и очередь
+
+- **LLMService.complete()** принимает `PipelineStage` (строку-enum) в качестве первого аргумента — НЕ объект
+- **InMemoryQueue**: кастомная очередь в памяти для dev; BullMQ — для production (Redis обязателен)
+- **LLM_MOCK=true**: моковые ответы для разработки без реального LLM
+- **ioredis**: динамический импорт, не в package.json — Redis работает только если пакет установлен вручную

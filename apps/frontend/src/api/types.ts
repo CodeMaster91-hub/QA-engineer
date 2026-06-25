@@ -12,7 +12,8 @@ export type PipelineStage =
   | 'new'
   | 'source_ingested'
   | 'requirements_extracted'
-  | 'draft_created'
+  | 'test_plan_created'
+  | 'test_cases_created'
   | 'coverage_audited'
   | 'review'
   | 'dry_run_completed'
@@ -22,7 +23,8 @@ export const PIPELINE_STAGE_ORDER: PipelineStage[] = [
   'new',
   'source_ingested',
   'requirements_extracted',
-  'draft_created',
+  'test_plan_created',
+  'test_cases_created',
   'coverage_audited',
   'review',
   'dry_run_completed',

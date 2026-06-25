@@ -2,7 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AgentsService } from './agents.service';
-import { AgentConfig, PipelineStage } from './agent-config.entity';
+import { AgentConfig } from './agent-config.entity';
+import { PipelineStage } from '../pipeline/pipeline.entity';
 
 describe('AgentsService', () => {
   let service: AgentsService;

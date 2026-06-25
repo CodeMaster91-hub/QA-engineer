@@ -14,7 +14,8 @@ coverage_audited → review → dry_run_completed → published
 | new | Фича создана | - |
 | source_ingested | Исходный бандл загружен | source |
 | requirements_extracted | Требования извлечены | requirements |
-| draft_created | Черновик тест-кейсов создан | testcases |
+| test_plan_created | Тест-план создан | testplan |
+| test_cases_created | Тест-кейсы созданы | testcases |
 | coverage_audited | Аудит покрытия пройден | coverage |
 | review | Ревью завершено | review |
 | dry_run_completed | Пробный запуск завершен | dry_run |
@@ -22,7 +23,7 @@ coverage_audited → review → dry_run_completed → published
 
 ## UI Pipeline Stages
 
-Backend имеет 9 этапов, UI показывает 9 (test_plan и test_cases — независимые):
+Backend имеет 9 этапов, UI показывает 8 (без `new`):
 
 | UI Stage | Backend Stage | Артефакт | Формат рендера |
 |----------|---------------|----------|----------------|
@@ -223,15 +224,37 @@ Body: { "stage": "requirements_extracted" }
 
 **Response:** Pipeline object
 
+### POST /api/pipeline/:slug/fill-gaps
+
+Дополнить тест-кейсы для устранения пробелов в покрытии. Доступен только когда pipeline в статусе `waiting_for_qa` на этапе `coverage_audited`.
+
+**Request Body:**
+```json
+{
+  "gaps": ["REQ-001: нет тест-кейса на истечение SMS-кода", "REQ-003: нет негативного кейса"]
+}
+```
+
+**Response:** Pipeline object
+
+**Логика:**
+1. LLM генерирует новые тест-кейсы для каждого gap (модель `test_cases_created`)
+2. Новые кейсы объединяются с существующими (merge, перенумерация ID)
+3. Автоматический переаудит покрытия (модель `coverage_audited`)
+4. Если пробелы остались → `waiting_for_qa`, если нет → `completed`
+
+**SSE события:**
+- `pipeline:fill-gaps-started` — начало генерации
+- `pipeline:fill-gaps-done` — завершение (триггерит обновление UI)
+
+**Отличие от Restart stage:**
+- Restart stage: удаляет все тест-кейсы → генерирует с нуля
+- Fill gaps: сохраняет существующие кейсы → добавляет недостающие
+
 ## ENV переменные
 
 ```env
-# Redis (для BullMQ)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
 # Pipeline
-PIPELINE_CONCURRENCY=3
 PIPELINE_MAX_RETRIES=3
 PIPELINE_RETRY_DELAY=2000
 ```
@@ -239,10 +262,10 @@ PIPELINE_RETRY_DELAY=2000
 ## Архитектура
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Controller │────▶│   Service   │────▶│   Queue     │
-│  (HTTP)     │     │  (Business) │     │  (BullMQ)   │
-└─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────────┐
+│  Controller │────▶│   Service   │────▶│  InMemoryQueue  │
+│  (HTTP)     │     │  (Business) │     │  (dev) / BullMQ │
+└─────────────┘     └─────────────┘     └─────────────────┘
        │                    │                    │
        │ approve/answer     │                    │
        ▼                    ▼                    ▼
@@ -250,17 +273,18 @@ PIPELINE_RETRY_DELAY=2000
 │  Pipeline   │     │  Workflow   │     │  Processor  │
 │  Service    │◀────│   Engine    │◀────│  (Worker)   │
 └─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  LLM Service│
-                    └─────────────┘
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │  LLM Service│
+                     └─────────────┘
 ```
 
 ## Retry Logic
 
-- **LLM этапы**: 3 попытки, exponential backoff (2s, 4s, 8s)
+- **LLM этапы**: 3 попытки (PIPELINE_MAX_RETRIES), фиксированная задержка
 - **TestRail sync**: 5 попыток (настраивается через ENV)
+- **Невалидная модель (400)**: fast-fail, без ретраев
 
 ## Пример использования
 

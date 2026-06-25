@@ -260,6 +260,50 @@ export class PipelineService {
     return pipeline;
   }
 
+  async fillGaps(slug: string, gaps: string[]): Promise<Pipeline> {
+    const pipeline = await this.findByFeatureSlug(slug);
+
+    if (pipeline.status !== PipelineStatus.WAITING_FOR_QA) {
+      throw new BadRequestException('Pipeline is not waiting for QA approval');
+    }
+    if (pipeline.blockedStage !== PipelineStage.COVERAGE_AUDITED) {
+      throw new BadRequestException('Fill gaps is only available at coverage_audited stage');
+    }
+
+    if (!gaps.length) {
+      throw new BadRequestException('No gaps provided');
+    }
+
+    pipeline.status = PipelineStatus.RUNNING;
+    pipeline.coverageGaps = null;
+    await this.pipelineRepository.save(pipeline);
+
+    await this.eventsService.emit(pipeline.featureId, {
+      type: 'pipeline:fill-gaps-started',
+      data: { gapsCount: gaps.length },
+      timestamp: new Date(),
+    });
+
+    const result = await this.workflowEngine.fillGaps(pipeline.featureId, gaps);
+
+    if (result.status === 'completed' || result.status === 'waiting_for_qa') {
+      await this.handleStageResult(pipeline.id, PipelineStage.COVERAGE_AUDITED, result);
+    } else {
+      pipeline.status = PipelineStatus.WAITING_FOR_QA;
+      pipeline.blockedStage = PipelineStage.COVERAGE_AUDITED;
+      pipeline.coverageGaps = gaps;
+      await this.pipelineRepository.save(pipeline);
+    }
+
+    await this.eventsService.emit(pipeline.featureId, {
+      type: 'pipeline:fill-gaps-done',
+      data: { success: result.status !== 'failed', error: result.error || null },
+      timestamp: new Date(),
+    });
+
+    return this.findByFeatureSlug(slug);
+  }
+
   async getStatus(slug: string): Promise<Pipeline> {
     return this.findByFeatureSlug(slug);
   }

@@ -2,7 +2,8 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { AgentConfig, PipelineStage } from './agent-config.entity';
+import { AgentConfig } from './agent-config.entity';
+import { PipelineStage } from '../pipeline/pipeline.entity';
 
 @Injectable()
 export class AgentsService implements OnModuleInit {
@@ -18,84 +19,90 @@ export class AgentsService implements OnModuleInit {
     await this.seedDefaultConfigs();
   }
 
+  private resolveAlias(stageEnvKey: string): string {
+    const stageAlias = this.configService.get<string>(stageEnvKey);
+    if (stageAlias) return stageAlias;
+
+    const model = this.configService.get<string>('LLM_MODEL');
+    if (model) return model;
+
+    const defaultAlias = this.configService.get<string>('LLM_DEFAULT_ALIAS', 'default');
+    return defaultAlias;
+  }
+
   private async seedDefaultConfigs() {
-    const defaultAlias = this.configService.get<string>(
-      'LLM_DEFAULT_ALIAS',
-      'default',
-    );
+    const provider = this.configService.get<string>('LLM_PROVIDER_ID', 'custom');
 
     const defaultConfigs = [
       {
         stage: PipelineStage.REQUIREMENTS_EXTRACTED,
-        alias: this.configService.get<string>(
-          'LLM_ALIAS_REQUIREMENTS',
-          defaultAlias,
-        ),
-        provider: this.configService.get<string>('LLM_PROVIDER_ID', 'custom'),
+        aliasEnv: 'LLM_ALIAS_REQUIREMENTS',
         temperature: 0.1,
         maxTokens: 4096,
       },
       {
         stage: PipelineStage.TEST_PLAN_CREATED,
-        alias: this.configService.get<string>(
-          'LLM_ALIAS_TEST_PLAN',
-          defaultAlias,
-        ),
-        provider: this.configService.get<string>('LLM_PROVIDER_ID', 'custom'),
+        aliasEnv: 'LLM_ALIAS_TEST_PLAN',
         temperature: 0.2,
         maxTokens: 8192,
       },
       {
         stage: PipelineStage.TEST_CASES_CREATED,
-        alias: this.configService.get<string>(
-          'LLM_ALIAS_TEST_CASES',
-          defaultAlias,
-        ),
-        provider: this.configService.get<string>('LLM_PROVIDER_ID', 'custom'),
+        aliasEnv: 'LLM_ALIAS_TEST_CASES',
         temperature: 0.2,
         maxTokens: 8192,
       },
       {
         stage: PipelineStage.COVERAGE_AUDITED,
-        alias: this.configService.get<string>(
-          'LLM_ALIAS_COVERAGE',
-          defaultAlias,
-        ),
-        provider: this.configService.get<string>('LLM_PROVIDER_ID', 'custom'),
+        aliasEnv: 'LLM_ALIAS_COVERAGE',
         temperature: 0.2,
         maxTokens: 4096,
       },
       {
         stage: PipelineStage.REVIEW,
-        alias: this.configService.get<string>(
-          'LLM_ALIAS_REVIEW',
-          defaultAlias,
-        ),
-        provider: this.configService.get<string>('LLM_PROVIDER_ID', 'custom'),
+        aliasEnv: 'LLM_ALIAS_REVIEW',
         temperature: 0.1,
         maxTokens: 4096,
       },
       {
-        stage: PipelineStage.DRY_RUN,
-        alias: this.configService.get<string>(
-          'LLM_ALIAS_DRY_RUN',
-          defaultAlias,
-        ),
-        provider: this.configService.get<string>('LLM_PROVIDER_ID', 'custom'),
+        stage: PipelineStage.DRY_RUN_COMPLETED,
+        aliasEnv: 'LLM_ALIAS_DRY_RUN',
         temperature: 0.1,
         maxTokens: 4096,
       },
     ];
 
-    for (const config of defaultConfigs) {
+    for (const cfg of defaultConfigs) {
+      const alias = this.resolveAlias(cfg.aliasEnv);
       const existing = await this.agentConfigRepository.findOne({
-        where: { stage: config.stage },
+        where: { stage: cfg.stage },
       });
+
       if (!existing) {
         await this.agentConfigRepository.save(
-          this.agentConfigRepository.create(config),
+          this.agentConfigRepository.create({
+            stage: cfg.stage,
+            alias,
+            provider,
+            temperature: cfg.temperature,
+            maxTokens: cfg.maxTokens,
+          }),
         );
-        this.logger.log(`Seeded config for stage: ${config.stage}`);
+        this.logger.log(`Seeded config for stage: ${cfg.stage} (alias: ${alias})`);
+      } else {
+        let changed = false;
+        if (existing.alias !== alias) {
+          existing.alias = alias;
+          changed = true;
+        }
+        if (existing.provider !== provider) {
+          existing.provider = provider;
+          changed = true;
+        }
+        if (changed) {
+          await this.agentConfigRepository.save(existing);
+          this.logger.log(`Synced config for stage: ${cfg.stage} (alias: ${alias})`);
+        }
       }
     }
   }
@@ -126,20 +133,17 @@ export class AgentsService implements OnModuleInit {
   ): Promise<{ alias: string; temperature: number; maxTokens: number }> {
     const config = await this.findByStage(stage);
     if (!config || !config.enabled) {
-      const defaultAlias = this.configService.get<string>(
-        'LLM_DEFAULT_ALIAS',
-        'default',
-      );
+      const alias = this.resolveAlias('');
       return {
-        alias: defaultAlias,
+        alias,
         temperature: 0.1,
         maxTokens: 4096,
       };
     }
     return {
       alias: config.alias,
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
+      temperature: Number(config.temperature),
+      maxTokens: Number(config.maxTokens),
     };
   }
 

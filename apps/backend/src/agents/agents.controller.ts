@@ -10,7 +10,7 @@ import { JwtAuthGuard, RolesGuard } from '../auth/auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { AgentsService } from './agents.service';
 import { UpdateAgentConfigDto } from './dto/update-agent-config.dto';
-import { PipelineStage } from './agent-config.entity';
+import { PipelineStage } from '../pipeline/pipeline.entity';
 
 @Controller('agents')
 @UseGuards(JwtAuthGuard, RolesGuard)
