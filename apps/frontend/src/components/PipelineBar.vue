@@ -4,11 +4,12 @@
       v-for="(stageObj, idx) in stages"
       :key="stageObj.key"
       class="pipeline-stage"
+      :class="{ selected: selectedStage === stageObj.key }"
       @click="$emit('select:stage', stageObj.key)"
     >
       <div
         class="stage-node"
-        :class="[statusClass(stageObj.status), { selected: selectedStage === stageObj.key }]"
+        :class="statusClass(stageObj.status)"
         @mouseenter="hoveredStage = stageObj.key"
         @mouseleave="hoveredStage = null"
       >
@@ -126,6 +127,15 @@ const connectorClass = (status: string) => {
   gap: 6px;
   position: relative;
   cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.pipeline-stage.selected {
+  box-shadow: 0 0 0 4px #1068bf22;
+  outline: 2px solid #1068bf;
+  outline-offset: -2px;
 }
 
 .pipeline-stage:hover .stage-label {
@@ -142,12 +152,6 @@ const connectorClass = (status: string) => {
   flex-shrink: 0;
   transition: all 0.2s ease;
   position: relative;
-}
-
-.stage-node.selected {
-  box-shadow: 0 0 0 4px #1068bf33;
-  outline: 2px solid #1068bf;
-  outline-offset: 2px;
 }
 
 .stage-node.selected {
