@@ -457,8 +457,8 @@ onUnmounted(() => {
   width: 270px;
   min-width: 0;
   height: 100vh;
-  background: #252540;
-  color: #ccc;
+  background: #586177;
+  color: #e0e0e0;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -562,16 +562,16 @@ onUnmounted(() => {
   transition: background 0.15s;
   position: relative;
   margin-bottom: 6px;
-  background: #2d2d4a;
+  background: #7a8399;
   border: 1px solid transparent;
 }
 
 .sidebar-item:hover {
-  background: #353560;
+  background: #8a94aa;
 }
 
 .sidebar-item.selected {
-  background: #353560;
+  background: #8a94aa;
   outline: 2px solid #4fc3f7;
   outline-offset: -2px;
   border-color: #4fc3f744;
