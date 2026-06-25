@@ -49,7 +49,7 @@
 
         <!-- Restart overlay on hover -->
         <div
-          v-if="hoveredStage === stageObj.key"
+          v-if="hoveredStage === stageObj.key && stageObj.status !== 'queued'"
           class="restart-overlay"
           @click.stop="$emit('restart:stage', stageObj.key)"
           title="Перезапустить этап"
