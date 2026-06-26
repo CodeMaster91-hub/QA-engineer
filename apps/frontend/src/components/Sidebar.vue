@@ -20,12 +20,28 @@
       <button v-if="sidebarWidth > 60" class="btn-new" @click="showCreate = true">+ Новая фича</button>
     </div>
 
+    <div v-if="sidebarWidth > 60" class="sidebar-model" @click="onSidebarClick">
+      <div class="model-label">Модель</div>
+      <div class="model-value">{{ currentModel || '...' }}</div>
+      <div class="model-provider">{{ currentProvider }}</div>
+    </div>
+
+    <div v-if="sidebarWidth > 60" class="sidebar-search" @click="onSidebarClick">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="search-input"
+        placeholder="Поиск фичи..."
+        @click.stop
+      />
+    </div>
+
     <div class="sidebar-list" @click="onSidebarClick">
       <div v-if="loading" class="sidebar-loading">Загрузка...</div>
 
       <template v-else>
         <div
-          v-for="feature in features"
+          v-for="feature in filteredFeatures"
           :key="feature.id"
           class="sidebar-item"
           :class="{ selected: selectedSlug === feature.slug }"
@@ -36,7 +52,10 @@
           <template v-if="sidebarWidth > 60">
             <div class="item-info">
               <div class="item-title">{{ feature.title || feature.slug }}</div>
-              <div class="item-status">{{ pipelineLabel(feature.slug) }}</div>
+              <div class="item-meta">
+                <span class="item-status">{{ pipelineLabel(feature.slug) }}</span>
+                <span class="item-counts">{{ feature.reqCount }} req · {{ feature.caseCount }} cases</span>
+              </div>
             </div>
           </template>
 
@@ -48,6 +67,9 @@
 
       <div v-if="!loading && features.length === 0" class="sidebar-empty">
         Нет фич
+      </div>
+      <div v-if="!loading && searchQuery && filteredFeatures.length === 0" class="sidebar-empty">
+        Ничего не найдено
       </div>
     </div>
 
@@ -140,7 +162,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import { PIPELINE_STAGE_ORDER } from '@/api/types'
-import type { Pipeline } from '@/api/types'
+import type { Pipeline, Feature, LlmProvider } from '@/api/types'
 import SettingsView from '@/views/SettingsView.vue'
 
 const router = useRouter()
@@ -150,14 +172,38 @@ const sidebarWidth = ref(270)
 const previousWidth = ref(270)
 const isTransitioning = ref(false)
 const isResizing = ref(false)
-const features = ref<any[]>([])
+const features = ref<Feature[]>([])
 const loading = ref(true)
 const showCreate = ref(false)
 const showSettings = ref(false)
 const submitting = ref(false)
 const error = ref('')
+const searchQuery = ref('')
+const currentModel = ref<string>('')
+const currentProvider = ref<string>('')
 
 const pipelineMap = ref<Record<string, Pipeline>>({})
+
+const filteredFeatures = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return features.value
+  return features.value.filter((f) =>
+    f.title.toLowerCase().includes(q) || f.slug.toLowerCase().includes(q),
+  )
+})
+
+const loadModelInfo = async () => {
+  try {
+    const providers = await api.get<LlmProvider[]>('/agents/providers')
+    if (providers?.length) {
+      const p = providers[0]
+      currentProvider.value = p.name
+      currentModel.value = p.aliases[0] || p.name
+    }
+  } catch {
+    currentModel.value = 'N/A'
+  }
+}
 
 const selectedSlug = computed(() => {
   const slug = route.params.slug as string
@@ -427,7 +473,7 @@ const unsubscribeAll = () => {
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
-  await loadFeatures()
+  await Promise.all([loadFeatures(), loadModelInfo()])
   await loadPipelines()
   features.value.forEach(f => {
     const p = pipelineMap.value[f.slug]
@@ -470,6 +516,56 @@ onUnmounted(() => {
   justify-content: center;
   align-items: center;
   border-bottom: 1px solid #2a2a4e;
+}
+
+.sidebar-model {
+  padding: 10px 12px;
+  border-bottom: 1px solid #2a2a4e;
+}
+
+.model-label {
+  font-size: 0.65em;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.model-value {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.model-provider {
+  font-size: 0.7em;
+  color: #888;
+  margin-top: 1px;
+}
+
+.sidebar-search {
+  padding: 8px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #2a2a4e;
+  border-radius: 6px;
+  background: #2a2f3e;
+  color: #e0e0e0;
+  font-size: 0.85em;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.search-input::placeholder {
+  color: #666;
+}
+
+.search-input:focus {
+  border-color: #4fc3f7;
 }
 
 .collapse-btn {
@@ -611,6 +707,18 @@ onUnmounted(() => {
   font-size: 0.7em;
   color: #888;
   margin-top: 2px;
+}
+
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.item-counts {
+  font-size: 0.65em;
+  color: #555;
 }
 
 .tooltip {

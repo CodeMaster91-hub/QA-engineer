@@ -90,8 +90,26 @@ export interface Feature {
   sourceType?: string;
   sourceFileName?: string;
   artifacts?: Artifact[];
+  reqCount: number;
+  caseCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AgentConfig {
+  id: string;
+  stage: string;
+  alias: string;
+  provider: string;
+  temperature: number;
+  maxTokens: number;
+  enabled: boolean;
+}
+
+export interface LlmProvider {
+  id: string;
+  name: string;
+  aliases: string[];
 }
 
 export type StageStatus = 'created' | 'running' | 'success' | 'failed' | 'canceled';

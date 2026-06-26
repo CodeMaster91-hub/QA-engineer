@@ -1,6 +1,6 @@
 ﻿import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Feature, FeatureStatus } from './feature.entity';
 import { FeatureArtifact, ArtifactType } from './feature-artifact.entity';
 import { FileProcessorService, ProcessedFile } from '../common/file-processor/file-processor.service';
@@ -19,16 +19,22 @@ export class FeaturesService {
     private urlFetcher: UrlFetcherService,
   ) {}
 
-  async findAll(page = 1, limit = 20): Promise<{ data: Feature[]; total: number }> {
+  async findAll(page = 1, limit = 20): Promise<{ data: (Feature & { reqCount: number; caseCount: number })[]; total: number }> {
     const [data, total] = await this.featuresRepository.findAndCount({
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
     });
-    return { data, total };
+    const result = await Promise.all(
+      data.map(async (feature) => {
+        const counts = await this.getArtifactCounts(feature.id);
+        return { ...feature, reqCount: counts.reqCount, caseCount: counts.caseCount };
+      }),
+    );
+    return { data: result, total };
   }
 
-  async findBySlug(slug: string): Promise<Feature> {
+  async findBySlug(slug: string): Promise<Feature & { reqCount: number; caseCount: number }> {
     const feature = await this.featuresRepository.findOne({
       where: { slug },
       relations: ['artifacts'],
@@ -36,7 +42,8 @@ export class FeaturesService {
     if (!feature) {
       throw new NotFoundException(`Feature with slug "${slug}" not found`);
     }
-    return feature;
+    const counts = await this.getArtifactCounts(feature.id);
+    return { ...feature, reqCount: counts.reqCount, caseCount: counts.caseCount };
   }
 
   async create(slug: string, title: string): Promise<Feature> {
@@ -206,6 +213,24 @@ export class FeaturesService {
     return this.artifactsRepository.find({
       where: { featureId },
     });
+  }
+
+  async getArtifactCounts(featureId: string): Promise<{ reqCount: number; caseCount: number }> {
+    const artifacts = await this.artifactsRepository.find({
+      where: { featureId, type: In([ArtifactType.REQUIREMENTS, ArtifactType.TESTCASES]) },
+    });
+    let reqCount = 0;
+    let caseCount = 0;
+    for (const artifact of artifacts) {
+      if (artifact.type === ArtifactType.REQUIREMENTS) {
+        const content = artifact.content as { requirements?: any[] };
+        reqCount = content?.requirements?.length || 0;
+      } else if (artifact.type === ArtifactType.TESTCASES) {
+        const content = artifact.content as { cases?: any[] };
+        caseCount = content?.cases?.length || 0;
+      }
+    }
+    return { reqCount, caseCount };
   }
 
   async upsertArtifact(
