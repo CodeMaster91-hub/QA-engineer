@@ -42,28 +42,27 @@
       <div v-if="loading" class="sidebar-loading">Загрузка...</div>
 
       <template v-if="!loading">
-        <div
-          v-for="feature in features"
-          :key="feature.id"
-          class="feature-mini"
-          :class="{ 'is-active': selectedSlug === feature.slug }"
-          @click="navigateTo(feature.slug)"
-        >
-          <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
-          <div class="feature-mini__tooltip">{{ feature.title || feature.slug }}</div>
-        </div>
+        <div v-for="feature in features" :key="feature.id" class="feature-slot">
+          <div
+            class="feature-mini"
+            :class="{ 'is-active': selectedSlug === feature.slug }"
+            @click="navigateTo(feature.slug)"
+          >
+            <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
+            <div class="feature-mini__tooltip">{{ feature.title || feature.slug }}</div>
+          </div>
 
-        <div
-          v-for="feature in filteredFeatures"
-          :key="'full-' + feature.id"
-          class="feature-item"
-          :class="{ 'is-active': selectedSlug === feature.slug }"
-          @click="navigateTo(feature.slug)"
-        >
-          <div class="feature-item__title">{{ feature.title || feature.slug }}</div>
-          <div class="feature-item__meta">
-            <span>{{ feature.caseCount }} кейсов</span>
-            <span>{{ feature.reqCount }} требований</span>
+          <div
+            v-if="sidebarWidth > 60 && isFeatureVisible(feature)"
+            class="feature-item"
+            :class="{ 'is-active': selectedSlug === feature.slug }"
+            @click="navigateTo(feature.slug)"
+          >
+            <div class="feature-item__title">{{ feature.title || feature.slug }}</div>
+            <div class="feature-item__meta">
+              <span>{{ feature.caseCount }} кейсов</span>
+              <span>{{ feature.reqCount }} требований</span>
+            </div>
           </div>
         </div>
 
@@ -189,6 +188,12 @@ const filteredFeatures = computed(() => {
     f.title.toLowerCase().includes(q) || f.slug.toLowerCase().includes(q),
   )
 })
+
+const isFeatureVisible = (feature: Feature) => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return true
+  return feature.title.toLowerCase().includes(q) || feature.slug.toLowerCase().includes(q)
+}
 
 const loadModelInfo = async () => {
   try {
@@ -378,6 +383,10 @@ const onHoverExpand = () => {
   if (isCollapsed.value && !isResizing.value) {
     sidebarWidth.value = EXPANDED_WIDTH
     isTransitioning.value = true
+    requestAnimationFrame(() => {
+      const list = document.querySelector('.sidebar-list') as HTMLElement | null
+      list?.scrollTo({ top: 0, behavior: 'auto' })
+    })
     setTimeout(() => { isTransitioning.value = false }, 250)
   }
 }
@@ -652,6 +661,19 @@ onUnmounted(() => {
   display: none;
 }
 
+/* === Feature Slot (overlapping mini + full) === */
+.feature-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar:not(.collapsed) .feature-slot {
+  align-items: stretch;
+  justify-content: stretch;
+}
+
 /* === Feature Item === */
 .feature-item {
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -662,11 +684,16 @@ onUnmounted(() => {
   transition: background 0.15s, border-color 0.15s, opacity 0.25s ease;
   opacity: 0;
   pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
 }
 
 .sidebar:not(.collapsed) .feature-item {
   opacity: 1;
   pointer-events: auto;
+  position: relative;
 }
 
 .feature-item:hover {
@@ -711,6 +738,7 @@ onUnmounted(() => {
 .sidebar:not(.collapsed) .feature-mini {
   opacity: 0;
   pointer-events: none;
+  position: absolute;
 }
 
 .feature-mini:hover {
