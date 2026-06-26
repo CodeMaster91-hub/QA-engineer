@@ -664,14 +664,16 @@ onUnmounted(() => {
 /* === Feature Slot (overlapping mini + full) === */
 .feature-slot {
   position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 40px;
 }
 
 .sidebar:not(.collapsed) .feature-slot {
-  align-items: stretch;
-  justify-content: stretch;
+  display: block;
+  min-height: auto;
 }
 
 /* === Feature Item === */
@@ -688,12 +690,14 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   right: 0;
+  box-sizing: border-box;
 }
 
 .sidebar:not(.collapsed) .feature-item {
   opacity: 1;
   pointer-events: auto;
   position: relative;
+  width: 100%;
 }
 
 .feature-item:hover {
