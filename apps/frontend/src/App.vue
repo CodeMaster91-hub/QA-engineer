@@ -33,6 +33,7 @@ body {
 .main-content {
   display: flex;
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   padding: 20px;
 }

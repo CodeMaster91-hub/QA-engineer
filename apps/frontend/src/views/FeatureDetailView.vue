@@ -560,6 +560,7 @@ onUnmounted(() => {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   width: 100%;
   max-width: 100%;
   overflow: hidden;
@@ -752,14 +753,13 @@ onUnmounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   min-height: 0;
 }
 
 .stage-content :deep(.stage-panel),
 .stage-content :deep(.split-container) {
   flex: 1;
-  align-self: stretch;
+  width: 100%;
   min-width: 0;
   overflow-y: auto;
 }
