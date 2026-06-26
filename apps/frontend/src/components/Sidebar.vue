@@ -16,8 +16,13 @@
 
     <div class="resize-handle" @mousedown="startResize"></div>
 
-    <div class="sidebar-header" @click="onSidebarClick">
-      <button v-if="sidebarWidth > 60" class="btn-new" @click="showCreate = true">+ Новая фича</button>
+    <div class="sidebar-brand" @click="onSidebarClick">
+      <img src="/qa-icon.svg" alt="QA Platform" class="sidebar-brand__logo" />
+      <span class="sidebar-brand__text">QA Platform</span>
+    </div>
+
+    <div v-if="sidebarWidth > 60" class="sidebar-section" @click="onSidebarClick">
+      <button class="btn-new" @click="showCreate = true">Новая фича</button>
     </div>
 
     <div v-if="sidebarWidth > 60" class="runtime-box" @click="onSidebarClick">
@@ -503,12 +508,32 @@ onUnmounted(() => {
   transition: width 0.2s ease;
 }
 
-/* === Header / New Feature === */
-.sidebar-header {
-  padding: 0 12px 12px;
+/* === Brand Header (Variant B — Bold / Centered) === */
+.sidebar-brand {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  padding: 24px 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.sidebar-brand__logo {
+  width: 48px;
+  height: 48px;
+}
+
+.sidebar-brand__text {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #edf3ff;
+  letter-spacing: 0.02em;
+}
+
+/* === New Feature Button === */
+.sidebar-section {
+  padding: 0 12px 12px;
   flex-shrink: 0;
 }
 
