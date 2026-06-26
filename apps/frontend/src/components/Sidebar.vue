@@ -41,10 +41,21 @@
     <div class="sidebar-list">
       <div v-if="loading" class="sidebar-loading">Загрузка...</div>
 
-      <template v-else-if="sidebarWidth > 60">
+      <template v-if="!loading">
+        <div
+          v-for="feature in features"
+          :key="feature.id"
+          class="feature-mini"
+          :class="{ 'is-active': selectedSlug === feature.slug }"
+          @click="navigateTo(feature.slug)"
+        >
+          <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
+          <div class="feature-mini__tooltip">{{ feature.title || feature.slug }}</div>
+        </div>
+
         <div
           v-for="feature in filteredFeatures"
-          :key="feature.id"
+          :key="'full-' + feature.id"
           class="feature-item"
           :class="{ 'is-active': selectedSlug === feature.slug }"
           @click="navigateTo(feature.slug)"
@@ -56,24 +67,11 @@
           </div>
         </div>
 
-        <div v-if="features.length === 0" class="sidebar-empty">
+        <div v-if="sidebarWidth > 60 && features.length === 0" class="sidebar-empty">
           Нет фич
         </div>
-        <div v-if="searchQuery && filteredFeatures.length === 0" class="sidebar-empty">
+        <div v-if="sidebarWidth > 60 && searchQuery && filteredFeatures.length === 0" class="sidebar-empty">
           Ничего не найдено
-        </div>
-      </template>
-
-      <template v-else>
-        <div
-          v-for="feature in features"
-          :key="feature.id"
-          class="feature-mini"
-          :class="{ 'is-active': selectedSlug === feature.slug }"
-          @click="navigateTo(feature.slug)"
-        >
-          <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
-          <div class="feature-mini__tooltip">{{ feature.title || feature.slug }}</div>
         </div>
       </template>
     </div>
@@ -661,7 +659,14 @@ onUnmounted(() => {
   border-radius: 14px;
   padding: 14px 14px 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.25s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar:not(.collapsed) .feature-item {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .feature-item:hover {
@@ -699,7 +704,13 @@ onUnmounted(() => {
   justify-content: center;
   cursor: pointer;
   position: relative;
-  transition: background 0.15s;
+  transition: opacity 0.2s ease;
+  opacity: 1;
+}
+
+.sidebar:not(.collapsed) .feature-mini {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .feature-mini:hover {
