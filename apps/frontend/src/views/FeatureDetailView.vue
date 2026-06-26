@@ -597,7 +597,6 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  width: 100%;
   flex-shrink: 0;
 }
 
@@ -643,7 +642,6 @@ onUnmounted(() => {
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: visible;
-  width: 100%;
   flex-shrink: 0;
 }
 
@@ -777,7 +775,6 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  width: 100%;
 }
 
 .logs-section h3 {

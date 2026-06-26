@@ -91,6 +91,7 @@ const statusClass = (status: string) => {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 100%;
 }
 
 .stage-panel h3 {
@@ -135,6 +136,11 @@ th {
 .status-not-covered { background: #ffebee; color: #c62828; }
 .status-blocked { background: #f3e5f5; color: #7b1fa2; }
 .status-default { background: #f5f5f5; color: #666; }
+
+.coverage-matrix,
+.coverage-report {
+  width: 100%;
+}
 
 .coverage-gaps {
   margin-top: 16px;

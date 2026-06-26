@@ -29,12 +29,17 @@ const renderedTestPlan = computed(() => renderMarkdown(testPlanMarkdown.value))
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 100%;
 }
 
 .stage-panel h3 {
   margin: 0 0 16px 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.markdown-rendered {
+  width: 100%;
 }
 
 .markdown-rendered :deep(h1) { font-size: 1.4em; margin: 16px 0 8px; }

@@ -38,6 +38,7 @@ defineEmits<{
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 100%;
 }
 
 .stage-panel h3 {
@@ -50,6 +51,7 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 16px;
+  width: 100%;
   padding: 20px;
   background: #e8f5e9;
   border-radius: 8px;
@@ -84,6 +86,7 @@ defineEmits<{
 .publish-actions {
   display: flex;
   justify-content: flex-end;
+  width: 100%;
 }
 
 .btn {
