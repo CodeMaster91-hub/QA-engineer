@@ -5,12 +5,9 @@
     :class="{ collapsed: sidebarWidth <= 60 }"
     @mouseenter="onHoverExpand"
   >
-    <button class="collapse-btn" @click.stop="onCollapseClick" :title="sidebarWidth <= 60 ? 'Развернуть' : 'Свернуть'">
-      <svg v-if="sidebarWidth > 60" viewBox="0 0 16 16" width="16" height="16">
+    <button v-if="sidebarWidth > 60" class="collapse-btn" @click.stop="onCollapseClick" title="Свернуть">
+      <svg viewBox="0 0 16 16" width="16" height="16">
         <path d="M10 4L6 8L10 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <svg v-else viewBox="0 0 16 16" width="16" height="16">
-        <path d="M6 4L10 8L6 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </button>
 
