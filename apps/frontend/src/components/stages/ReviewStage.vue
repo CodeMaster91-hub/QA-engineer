@@ -194,6 +194,7 @@ const severityLabel = (severity: string) => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -362,9 +363,13 @@ th {
 .section-questions { color: #92400e; }
 
 .empty {
+  flex: 1;
+  min-height: 0;
   color: #999;
   text-align: center;
-  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .table-wrapper {

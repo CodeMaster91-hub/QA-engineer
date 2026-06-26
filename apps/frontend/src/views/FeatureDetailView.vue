@@ -562,8 +562,7 @@ onUnmounted(() => {
   min-height: 0;
   width: 100%;
   max-width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .loading-state,
@@ -760,6 +759,7 @@ onUnmounted(() => {
 .stage-content :deep(.stage-panel),
 .stage-content :deep(.split-container) {
   flex: 1;
+  overflow-y: auto;
 }
 
 .stage-processing {

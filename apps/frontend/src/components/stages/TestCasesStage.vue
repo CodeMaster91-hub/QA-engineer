@@ -46,6 +46,7 @@ const cases = computed(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -60,7 +61,10 @@ const cases = computed(() => {
 }
 
 .cases-table {
+  flex: 1;
+  min-height: 0;
   overflow-x: auto;
+  overflow-y: auto;
 }
 
 table {
@@ -107,8 +111,12 @@ th {
 .badge-rejected { background: #ffebee; color: #c62828; }
 
 .empty {
+  flex: 1;
+  min-height: 0;
   color: #999;
   text-align: center;
-  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

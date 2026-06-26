@@ -33,6 +33,7 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -103,5 +104,15 @@ defineEmits<{
 
 .btn-publish:hover {
   background: #258a51;
+}
+
+.empty {
+  flex: 1;
+  min-height: 0;
+  color: #999;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

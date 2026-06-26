@@ -287,8 +287,12 @@ th {
 .badge-low { background: #e8f5e9; color: #2e7d32; }
 
 .empty {
+  flex: 1;
+  min-height: 0;
   color: #999;
   text-align: center;
-  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

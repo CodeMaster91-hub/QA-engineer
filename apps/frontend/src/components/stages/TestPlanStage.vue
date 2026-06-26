@@ -24,6 +24,7 @@ const renderedTestPlan = computed(() => renderMarkdown(testPlanMarkdown.value))
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -50,8 +51,12 @@ const renderedTestPlan = computed(() => renderMarkdown(testPlanMarkdown.value))
 .markdown-rendered :deep(strong) { font-weight: 600; }
 
 .empty {
+  flex: 1;
+  min-height: 0;
   color: #999;
   text-align: center;
-  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
