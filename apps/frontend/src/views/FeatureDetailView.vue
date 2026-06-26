@@ -557,6 +557,7 @@ onUnmounted(() => {
 <style scoped>
 .feature-detail {
   width: 100%;
+  padding-bottom: 20px;
 }
 
 .loading-state,
