@@ -4,7 +4,6 @@
     :style="{ width: sidebarWidth + 'px' }"
     :class="{ collapsed: sidebarWidth <= 60 }"
     @mouseenter="onHoverExpand"
-    @mouseleave="onHoverCollapse"
   >
     <button class="collapse-btn" @click.stop="onCollapseClick" :title="sidebarWidth <= 60 ? 'Развернуть' : 'Свернуть'">
       <svg v-if="sidebarWidth > 60" viewBox="0 0 16 16" width="16" height="16">
@@ -383,14 +382,6 @@ const onCollapseClick = () => {
 const onHoverExpand = () => {
   if (isCollapsed.value) {
     sidebarWidth.value = EXPANDED_WIDTH
-    isTransitioning.value = true
-    setTimeout(() => { isTransitioning.value = false }, 250)
-  }
-}
-
-const onHoverCollapse = () => {
-  if (isCollapsed.value) {
-    sidebarWidth.value = COLLAPSED_WIDTH
     isTransitioning.value = true
     setTimeout(() => { isTransitioning.value = false }, 250)
   }
@@ -861,6 +852,10 @@ onUnmounted(() => {
   justify-content: center;
   width: auto;
   padding: 8px;
+}
+
+.sidebar.collapsed .settings-text {
+  display: none;
 }
 
 .settings-item:hover {
