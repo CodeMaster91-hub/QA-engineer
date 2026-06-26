@@ -54,7 +54,6 @@
         >
           <div class="feature-item__title">{{ feature.title || feature.slug }}</div>
           <div class="feature-item__meta">
-            <span>{{ feature.slug }}</span>
             <span>{{ feature.caseCount }} кейсов</span>
             <span>{{ feature.reqCount }} требований</span>
           </div>
