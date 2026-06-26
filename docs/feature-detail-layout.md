@@ -50,6 +50,7 @@
 
 - `.split-container` → `width: 100%`, `max-width: 100%`, `overflow-x: hidden`
 - `.split-panel` → `min-height: 0`
+- `ResizeObserver` на контейнере — пересчитывает `leftWidth`/`rightWidth` при изменении ширины (сворачивание сайдбара, ресайз окна), сохраняя пропорцию панелей
 
 ### `TestCasesStage.vue`
 
