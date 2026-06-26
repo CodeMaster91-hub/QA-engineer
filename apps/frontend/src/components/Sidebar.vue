@@ -70,19 +70,12 @@
 
     <div class="sidebar-footer" @click.stop>
       <div
-        class="sidebar-item settings-item"
-        :class="{ selected: showSettings }"
+        class="settings-item"
+        :class="{ 'is-selected': showSettings }"
         @click="showSettings = !showSettings"
       >
         <div class="settings-icon">⚙️</div>
-        <template v-if="sidebarWidth > 60">
-          <div class="item-info">
-            <div class="item-title">Настройки</div>
-          </div>
-        </template>
-        <template v-else>
-          <div class="tooltip">Настройки</div>
-        </template>
+        <span v-if="sidebarWidth > 60" class="settings-text">Настройки</span>
       </div>
     </div>
 
@@ -725,11 +718,33 @@ onUnmounted(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.settings-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.settings-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .settings-icon {
   font-size: 1.2em;
   flex-shrink: 0;
   width: 24px;
   text-align: center;
+}
+
+.settings-text {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: #edf3ff;
 }
 
 /* === Settings Overlay === */
