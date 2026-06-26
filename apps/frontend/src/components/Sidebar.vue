@@ -868,7 +868,12 @@ onUnmounted(() => {
   border-color: #764982;
 }
 
-.btn.btn-primary:hover:not(:disabled) {
+.btn-primary:hover {
   background: #8a5a96;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
