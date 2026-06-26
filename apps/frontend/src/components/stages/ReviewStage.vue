@@ -238,6 +238,10 @@ const severityLabel = (severity: string) => {
   margin-bottom: 16px;
 }
 
+.report-section:last-child {
+  margin-bottom: 0;
+}
+
 .report-section h4 {
   margin: 0 0 8px 0;
   font-size: 0.9em;
