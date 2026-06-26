@@ -383,6 +383,7 @@ const onHoverExpand = () => {
     setTimeout(() => { isTransitioning.value = false }, 250)
   }
 }
+}
 
 // Resize
 const startResize = (e: MouseEvent) => {
@@ -399,6 +400,9 @@ const onResize = (e: MouseEvent) => {
   if (!isResizing.value) return
   const newWidth = Math.max(60, Math.min(500, e.clientX))
   sidebarWidth.value = newWidth
+  if (newWidth > COLLAPSED_WIDTH) {
+    isCollapsed.value = false
+  }
 }
 
 const stopResize = () => {
