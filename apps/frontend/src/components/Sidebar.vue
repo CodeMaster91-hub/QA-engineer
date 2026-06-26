@@ -20,18 +20,18 @@
       <button v-if="sidebarWidth > 60" class="btn-new" @click="showCreate = true">+ Новая фича</button>
     </div>
 
-    <div v-if="sidebarWidth > 60" class="sidebar-model" @click="onSidebarClick">
-      <div class="model-label">Модель</div>
-      <div class="model-value">{{ currentModel || '...' }}</div>
-      <div class="model-provider">{{ currentProvider }}</div>
+    <div v-if="sidebarWidth > 60" class="runtime-box" @click="onSidebarClick">
+      <div class="runtime-box__label">Текущая модель</div>
+      <div class="runtime-box__value">{{ currentModel || '...' }}</div>
+      <div class="runtime-box__meta">{{ currentProvider }}</div>
     </div>
 
-    <div v-if="sidebarWidth > 60" class="sidebar-search" @click="onSidebarClick">
+    <div v-if="sidebarWidth > 60" class="sidebar__section" @click="onSidebarClick">
       <input
         v-model="searchQuery"
         type="search"
-        class="search-input"
-        placeholder="Поиск фичи..."
+        class="search"
+        placeholder="Поиск фичи"
         @click.stop
       />
     </div>
@@ -43,25 +43,16 @@
         <div
           v-for="feature in filteredFeatures"
           :key="feature.id"
-          class="sidebar-item"
-          :class="{ selected: selectedSlug === feature.slug }"
+          class="feature-item"
+          :class="{ 'is-active': selectedSlug === feature.slug }"
           @click="navigateTo(feature.slug)"
         >
-          <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
-
-          <template v-if="sidebarWidth > 60">
-            <div class="item-info">
-              <div class="item-title">{{ feature.title || feature.slug }}</div>
-              <div class="item-meta">
-                <span class="item-status">{{ pipelineLabel(feature.slug) }}</span>
-                <span class="item-counts">{{ feature.reqCount }} req · {{ feature.caseCount }} cases</span>
-              </div>
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="tooltip">{{ feature.title || feature.slug }}</div>
-          </template>
+          <div class="feature-item__title">{{ feature.title || feature.slug }}</div>
+          <div class="feature-item__meta">
+            <span>{{ feature.slug }}</span>
+            <span>{{ feature.caseCount }} кейсов</span>
+            <span>{{ feature.reqCount }} требований</span>
+          </div>
         </div>
       </template>
 
@@ -494,87 +485,161 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* === Sidebar === */
 .sidebar {
-  width: 270px;
+  width: 320px;
   min-width: 0;
   height: 100vh;
-  background: #1a1f2e;
-  color: #e0e0e0;
+  background: linear-gradient(180deg, #1f2a37 0%, #1b2430 100%);
+  color: #edf3ff;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .sidebar.transitioning {
   transition: width 0.2s ease;
 }
 
+/* === Header / New Feature === */
 .sidebar-header {
-  padding: 12px;
+  padding: 0 12px 12px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-bottom: 1px solid #2a2a4e;
+  flex-shrink: 0;
 }
 
-.sidebar-model {
-  padding: 10px 12px;
-  border-bottom: 1px solid #2a2a4e;
+/* === Runtime / Model Box === */
+.runtime-box {
+  margin: 0 12px 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  flex-shrink: 0;
 }
 
-.model-label {
-  font-size: 0.65em;
+.runtime-box__label {
+  font-size: 11px;
   text-transform: uppercase;
-  color: #666;
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
+  letter-spacing: 0.12em;
+  color: #9fb0c7;
+  margin-bottom: 8px;
 }
 
-.model-value {
-  font-size: 0.8em;
-  font-weight: 600;
-  color: #e0e0e0;
+.runtime-box__value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #edf3ff;
 }
 
-.model-provider {
-  font-size: 0.7em;
-  color: #888;
-  margin-top: 1px;
+.runtime-box__meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9fb0c7;
 }
 
-.sidebar-search {
-  padding: 8px;
+/* === Section (search) === */
+.sidebar__section {
+  padding: 0 12px 12px;
+  flex-shrink: 0;
 }
 
-.search-input {
+/* === Search === */
+.search {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #2a2a4e;
-  border-radius: 6px;
-  background: #2a2f3e;
-  color: #e0e0e0;
-  font-size: 0.85em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #edf3ff;
+  border-radius: 12px;
+  padding: 12px 14px;
   outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.search-input::placeholder {
-  color: #666;
+.search::placeholder {
+  color: rgba(237, 243, 255, 0.55);
 }
 
-.search-input:focus {
-  border-color: #4fc3f7;
+.search:focus {
+  border-color: rgba(91, 131, 255, 0.8);
+  box-shadow: 0 0 0 3px rgba(91, 131, 255, 0.18);
 }
 
+/* === Feature List === */
+.sidebar-list {
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 12px 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* === Feature Item === */
+.feature-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.feature-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.feature-item.is-active {
+  border-color: rgba(91, 131, 255, 0.75);
+  background: rgba(91, 131, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(91, 131, 255, 0.22);
+}
+
+.feature-item__title {
+  font-weight: 700;
+  color: #edf3ff;
+  line-height: 1.3;
+}
+
+.feature-item__meta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #9fb0c7;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* === Loading / Empty === */
+.sidebar-loading,
+.sidebar-empty {
+  text-align: center;
+  padding: 20px;
+  color: #9fb0c7;
+  font-size: 13px;
+}
+
+/* === Collapse / Resize === */
 .collapse-btn {
   position: absolute;
   right: -8px;
   bottom: 60px;
   z-index: 10;
-  background: #2a2a4e;
-  border: 1px solid #3a3a5e;
+  background: #243244;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ccc;
   cursor: pointer;
   padding: 4px;
@@ -603,148 +668,37 @@ onUnmounted(() => {
 }
 
 .resize-handle:hover {
-  background: rgba(79, 195, 247, 0.3);
+  background: rgba(91, 131, 255, 0.3);
 }
 
+/* === New Button === */
 .btn-new {
-  padding: 6px 12px;
+  padding: 10px 16px;
   border: none;
-  border-radius: 4px;
-  background: #764982;
+  border-radius: 12px;
+  background: #2157d6;
   color: white;
-  font-weight: 600;
-  font-size: 0.85em;
+  font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
+  width: 100%;
 }
 
 .btn-new:hover {
-  background: #8a5a96;
+  background: #2f6bf2;
 }
 
-.sidebar-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.sidebar-list::-webkit-scrollbar {
-  display: none;
-}
-
-.sidebar-loading,
-.sidebar-empty {
-  text-align: center;
-  padding: 20px;
-  color: #888;
-  font-size: 0.85em;
-}
-
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-  position: relative;
-  margin-bottom: 6px;
-  background: #2f3548;
-  border: 1px solid transparent;
-}
-
-.sidebar-item:hover {
-  background: #3f4558;
-}
-
-.sidebar-item.selected {
-  background: #1068bf;
-  outline: 2px solid #1068bf;
-  outline-offset: -2px;
-  border-color: transparent;
-}
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.idle { background: #666; }
-.status-dot.running { background: #4fc3f7; animation: pulse 1.5s infinite; }
-.status-dot.blocked { background: #f59e0b; }
-.status-dot.waiting_for_qa { background: #8b5cf6; }
-.status-dot.completed { background: #2da160; }
-.status-dot.failed { background: #dd2b0e; }
-.status-dot.cancelled { background: #666; }
-.status-dot.paused { background: #ef6c00; }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.item-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.item-title {
-  font-size: 0.85em;
-  font-weight: 500;
-  color: #e0e0e0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.item-status {
-  font-size: 0.7em;
-  color: #888;
-  margin-top: 2px;
-}
-
-.item-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.item-counts {
-  font-size: 0.65em;
-  color: #555;
-}
-
-.tooltip {
-  display: none;
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #333;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  white-space: nowrap;
-  z-index: 100;
-  margin-left: 8px;
-  pointer-events: none;
-}
-
-.sidebar-item:hover .tooltip {
-  display: block;
-}
-
+/* === Footer === */
 .sidebar-footer {
-  border-top: 1px solid #2a2a4e;
-  padding: 8px;
+  flex-shrink: 0;
+  padding: 10px 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .settings-icon {
@@ -754,7 +708,7 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* Settings Overlay */
+/* === Settings Overlay === */
 .settings-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -776,7 +730,7 @@ onUnmounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Modal */
+/* === Modal === */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -789,13 +743,14 @@ onUnmounted(() => {
 
 .modal {
   background: white;
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 30px;
   width: 100%;
   max-width: 500px;
   min-height: 480px;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 18px 40px rgba(26, 44, 66, 0.08);
 }
 
 .modal-body {
@@ -805,7 +760,8 @@ onUnmounted(() => {
 
 .modal h2 {
   margin-bottom: 20px;
-  color: #1a1a2e;
+  color: #17212b;
+  font-size: 24px;
 }
 
 .form-group {
@@ -816,7 +772,7 @@ onUnmounted(() => {
   display: block;
   margin-bottom: 6px;
   font-weight: 500;
-  color: #333;
+  color: #17212b;
 }
 
 .source-content {
@@ -837,27 +793,28 @@ onUnmounted(() => {
 .tab {
   flex: 1;
   padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 14px;
 }
 
-.tab:hover { background: #f5f5f5; }
+.tab:hover { background: #f6f8fb; }
 
 .tab.active {
-  background: #1a1a2e;
+  background: #2157d6;
   color: white;
-  border-color: #1a1a2e;
+  border-color: #2157d6;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
   font-size: 1em;
   box-sizing: border-box;
 }
@@ -875,8 +832,8 @@ onUnmounted(() => {
 }
 
 .file-drop-zone {
-  border: 2px dashed #ddd;
-  border-radius: 8px;
+  border: 2px dashed #d5dde8;
+  border-radius: 12px;
   padding: 24px;
   text-align: center;
   cursor: pointer;
@@ -890,8 +847,8 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.file-drop-zone:hover { border-color: #1a1a2e; }
-.file-drop-zone.has-file { border-color: #4caf50; background: #f1f8e9; }
+.file-drop-zone:hover { border-color: #2157d6; }
+.file-drop-zone.has-file { border-color: #0d8a5f; background: rgba(13, 138, 95, 0.06); }
 
 .file-placeholder {
   display: flex;
@@ -900,7 +857,7 @@ onUnmounted(() => {
 }
 
 .file-icon { font-size: 24px; }
-.file-hint { font-size: 0.85em; color: #666; }
+.file-hint { font-size: 0.85em; color: #5f6b7a; }
 
 .file-info {
   display: flex;
@@ -909,27 +866,27 @@ onUnmounted(() => {
 }
 
 .file-name { font-weight: 500; }
-.file-size { color: #666; font-size: 0.9em; }
+.file-size { color: #5f6b7a; font-size: 0.9em; }
 
 .file-remove {
   background: none;
   border: none;
   font-size: 16px;
   cursor: pointer;
-  color: #999;
+  color: #9fb0c7;
 }
 
-.file-remove:hover { color: #c62828; }
+.file-remove:hover { color: #c43e31; }
 
 .url-status { margin-top: 6px; font-size: 0.9em; }
-.url-status.valid { color: #2e7d32; }
-.url-status.invalid { color: #c62828; }
+.url-status.valid { color: #0d8a5f; }
+.url-status.invalid { color: #c43e31; }
 
 .error-message {
-  background: #ffebee;
-  color: #c62828;
+  background: rgba(196, 62, 49, 0.08);
+  color: #c43e31;
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-bottom: 16px;
 }
 
@@ -941,27 +898,27 @@ onUnmounted(() => {
 
 .btn {
   padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 14px;
   background: white;
-  color: #333;
+  color: #17212b;
   transition: all 0.2s;
 }
 
-.btn:hover { background: #f5f5f5; }
+.btn:hover { background: #f6f8fb; }
 
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-primary {
-  background: #764982;
+  background: #2157d6;
   color: white;
-  border-color: #764982;
+  border-color: #2157d6;
 }
 
 .btn-primary:hover {
-  background: #8a5a96;
+  background: #2f6bf2;
 }
 
 .btn-primary:disabled {
