@@ -377,7 +377,7 @@ const onCollapseClick = () => {
 }
 
 const onHoverExpand = () => {
-  if (isCollapsed.value) {
+  if (isCollapsed.value && !isResizing.value) {
     sidebarWidth.value = EXPANDED_WIDTH
     isTransitioning.value = true
     setTimeout(() => { isTransitioning.value = false }, 250)
