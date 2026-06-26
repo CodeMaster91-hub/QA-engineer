@@ -556,10 +556,14 @@ onUnmounted(() => {
 
 <style scoped>
 .feature-detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   max-width: 100%;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 20px;
 }
 
 .loading-state,
@@ -595,6 +599,7 @@ onUnmounted(() => {
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
+  flex-shrink: 0;
 }
 
 .header-info h1 {
@@ -640,6 +645,7 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: visible;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .pipeline-row {
@@ -744,10 +750,20 @@ onUnmounted(() => {
 }
 
 .stage-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   margin-bottom: 16px;
 }
 
+.stage-content :deep(.stage-panel),
+.stage-content :deep(.split-container) {
+  flex: 1;
+}
+
 .stage-processing {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

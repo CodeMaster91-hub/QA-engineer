@@ -31,12 +31,10 @@ body {
 }
 
 .main-content {
+  display: flex;
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   padding: 20px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
 .main-content::-webkit-scrollbar {

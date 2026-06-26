@@ -43,6 +43,9 @@ const cases = computed(() => {
 
 <style scoped>
 .stage-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   background: white;
   border-radius: 8px;
   padding: 20px;
