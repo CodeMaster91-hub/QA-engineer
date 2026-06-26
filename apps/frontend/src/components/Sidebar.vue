@@ -868,5 +868,7 @@ onUnmounted(() => {
   border-color: #764982;
 }
 
-.btn-primary:hover:not(:disabled) { background: #8a5a96; }
+.btn-primary:hover:not(:disabled) {
+  background: #8a5a96 !important;
+}
 </style>
