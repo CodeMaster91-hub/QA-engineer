@@ -50,3 +50,19 @@
 Когда будет подключено несколько провайдеров, достаточно:
 1. Заменить текст модели на `<select>` с опциями из `GET /api/agents/providers`
 2. При смене → `PATCH /api/agents/config/:stage` с новым alias
+
+## Layout Improvements
+
+### Feature Detail View
+
+**`apps/frontend/src/views/FeatureDetailView.vue`**
+- Убран `max-width: 1200px` — контент занимает всю доступную ширину справа от sidebar
+- Добавлен `padding-bottom: 20px` — симметрия с верхним отступом `.main-content`
+- `.detail-header`, `.pipeline-section`, `.logs-section` — `width: 100%`
+
+### Stage Components
+
+**Все stage-компоненты** (`stages/*.vue`):
+- `.stage-panel` — `width: 100%` во всех компонентах
+- `.split-container` (RequirementsStage) — `width: 100%`
+- Контент растягивается на всю доступную ширину экрана
