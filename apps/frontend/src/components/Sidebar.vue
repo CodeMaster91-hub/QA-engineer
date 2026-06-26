@@ -121,12 +121,7 @@
             </div>
           </div>
 
-          <div v-if="preview" class="form-group">
-            <label>Превью</label>
-            <div class="preview-box">{{ preview }}</div>
-          </div>
-
-          <div v-if="error" class="error-message">{{ error }}</div>
+            <div v-if="error" class="error-message">{{ error }}</div>
         </div>
 
         <div class="modal-actions">
@@ -821,17 +816,6 @@ onUnmounted(() => {
 .url-status { margin-top: 6px; font-size: 0.9em; }
 .url-status.valid { color: #2e7d32; }
 .url-status.invalid { color: #c62828; }
-
-.preview-box {
-  background: #f5f5f5;
-  border-radius: 4px;
-  padding: 12px;
-  font-size: 0.9em;
-  max-height: 120px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
 
 .error-message {
   background: #ffebee;
