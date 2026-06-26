@@ -753,6 +753,7 @@ onUnmounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   min-height: 0;
 }
 
