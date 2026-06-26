@@ -753,7 +753,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  margin-bottom: 16px;
 }
 
 .stage-content :deep(.stage-panel),
