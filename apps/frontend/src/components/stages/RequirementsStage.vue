@@ -93,6 +93,17 @@ const rightWidth = ref(400)
 const isDragging = ref(false)
 const MIN_PANEL_WIDTH = 250
 
+const recalcPanels = () => {
+  if (!containerRef.value) return
+  const w = containerRef.value.clientWidth
+  const total = w - 8
+  if (leftWidth.value + rightWidth.value !== total) {
+    const ratio = leftWidth.value / (leftWidth.value + rightWidth.value || 1)
+    leftWidth.value = Math.max(MIN_PANEL_WIDTH, Math.min(total - MIN_PANEL_WIDTH, Math.round(total * ratio)))
+    rightWidth.value = total - leftWidth.value
+  }
+}
+
 const startDrag = (e: MouseEvent) => {
   e.preventDefault()
   isDragging.value = true
@@ -119,17 +130,27 @@ const stopDrag = () => {
   document.body.style.userSelect = ''
 }
 
+let resizeObserver: ResizeObserver | null = null
+
 onMounted(() => {
   if (containerRef.value) {
     const w = containerRef.value.clientWidth
     leftWidth.value = w / 2
     rightWidth.value = w / 2 - 8
   }
+  resizeObserver = new ResizeObserver(recalcPanels)
+  if (containerRef.value) {
+    resizeObserver.observe(containerRef.value)
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
 })
 </script>
 
