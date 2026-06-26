@@ -139,7 +139,6 @@ onUnmounted(() => {
   align-items: stretch;
   gap: 0;
   min-height: 0;
-  width: 100%;
   max-width: 100%;
   overflow-x: hidden;
 }
