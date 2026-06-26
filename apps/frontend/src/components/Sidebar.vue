@@ -383,11 +383,11 @@ const onHoverExpand = () => {
   if (isCollapsed.value && !isResizing.value) {
     sidebarWidth.value = EXPANDED_WIDTH
     isTransitioning.value = true
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       const list = document.querySelector('.sidebar-list') as HTMLElement | null
-      list?.scrollTo({ top: 0, behavior: 'auto' })
-    })
-    setTimeout(() => { isTransitioning.value = false }, 250)
+      list?.scrollTo({ top: 0 })
+      isTransitioning.value = false
+    }, 300)
   }
 }
 
