@@ -2,8 +2,9 @@
   <div
     class="sidebar"
     :style="{ width: sidebarWidth + 'px' }"
-    :class="{ transitioning: isTransitioning }"
-    @click="onSidebarClick"
+    :class="{ collapsed: sidebarWidth <= 60 }"
+    @mouseenter="onHoverExpand"
+    @mouseleave="onHoverCollapse"
   >
     <button class="collapse-btn" @click.stop="onCollapseClick" :title="sidebarWidth <= 60 ? 'Развернуть' : 'Свернуть'">
       <svg v-if="sidebarWidth > 60" viewBox="0 0 16 16" width="16" height="16">
@@ -16,22 +17,22 @@
 
     <div class="resize-handle" @mousedown="startResize"></div>
 
-    <div class="sidebar-brand" @click="onSidebarClick">
+    <div class="sidebar-brand">
       <img src="/qa-icon.svg" alt="QA Platform" class="sidebar-brand__logo" />
       <span class="sidebar-brand__text">QA Platform</span>
     </div>
 
-    <div v-if="sidebarWidth > 60" class="sidebar-section" @click="onSidebarClick">
+    <div class="sidebar-section">
       <button class="btn-new" @click="showCreate = true">Новая фича</button>
     </div>
 
-    <div v-if="sidebarWidth > 60" class="runtime-box" @click="onSidebarClick">
+    <div class="runtime-box">
       <div class="runtime-box__label">Текущая модель</div>
       <div class="runtime-box__value">{{ currentModel || '...' }}</div>
       <div class="runtime-box__meta">{{ currentProvider }}</div>
     </div>
 
-    <div v-if="sidebarWidth > 60" class="sidebar__section" @click="onSidebarClick">
+    <div class="sidebar__section">
       <input
         v-model="searchQuery"
         type="search"
@@ -41,10 +42,10 @@
       />
     </div>
 
-    <div class="sidebar-list" @click="onSidebarClick">
+    <div class="sidebar-list">
       <div v-if="loading" class="sidebar-loading">Загрузка...</div>
 
-      <template v-else>
+      <template v-else-if="sidebarWidth > 60">
         <div
           v-for="feature in filteredFeatures"
           :key="feature.id"
@@ -58,14 +59,27 @@
             <span>{{ feature.reqCount }} требований</span>
           </div>
         </div>
+
+        <div v-if="features.length === 0" class="sidebar-empty">
+          Нет фич
+        </div>
+        <div v-if="searchQuery && filteredFeatures.length === 0" class="sidebar-empty">
+          Ничего не найдено
+        </div>
       </template>
 
-      <div v-if="!loading && features.length === 0" class="sidebar-empty">
-        Нет фич
-      </div>
-      <div v-if="!loading && searchQuery && filteredFeatures.length === 0" class="sidebar-empty">
-        Ничего не найдено
-      </div>
+      <template v-else>
+        <div
+          v-for="feature in features"
+          :key="feature.id"
+          class="feature-mini"
+          :class="{ 'is-active': selectedSlug === feature.slug }"
+          @click="navigateTo(feature.slug)"
+        >
+          <div class="status-dot" :class="pipelineStatus(feature.slug)"></div>
+          <div class="feature-mini__tooltip">{{ feature.title || feature.slug }}</div>
+        </div>
+      </template>
     </div>
 
     <div class="sidebar-footer" @click.stop>
@@ -75,7 +89,7 @@
         @click="showSettings = !showSettings"
       >
         <div class="settings-icon">⚙️</div>
-        <span v-if="sidebarWidth > 60" class="settings-text">Настройки</span>
+        <span class="settings-text">Настройки</span>
       </div>
     </div>
 
@@ -156,8 +170,10 @@ import SettingsView from '@/views/SettingsView.vue'
 const router = useRouter()
 const route = useRoute()
 
-const sidebarWidth = ref(270)
-const previousWidth = ref(270)
+const COLLAPSED_WIDTH = 60
+const EXPANDED_WIDTH = 320
+const sidebarWidth = ref(EXPANDED_WIDTH)
+const isCollapsed = ref(false)
 const isTransitioning = ref(false)
 const isResizing = ref(false)
 const features = ref<Feature[]>([])
@@ -356,21 +372,27 @@ const createFeature = async () => {
   }
 }
 
-// Collapse / Expand
+// Collapse / Expand (hover-based)
 const onCollapseClick = () => {
-  if (sidebarWidth.value > 60) {
-    previousWidth.value = sidebarWidth.value
-    sidebarWidth.value = 60
-  }
+  isCollapsed.value = !isCollapsed.value
+  sidebarWidth.value = isCollapsed.value ? COLLAPSED_WIDTH : EXPANDED_WIDTH
   isTransitioning.value = true
-  setTimeout(() => { isTransitioning.value = false }, 200)
+  setTimeout(() => { isTransitioning.value = false }, 250)
 }
 
-const onSidebarClick = () => {
-  if (sidebarWidth.value <= 60) {
-    sidebarWidth.value = previousWidth.value
+const onHoverExpand = () => {
+  if (isCollapsed.value) {
+    sidebarWidth.value = EXPANDED_WIDTH
     isTransitioning.value = true
-    setTimeout(() => { isTransitioning.value = false }, 200)
+    setTimeout(() => { isTransitioning.value = false }, 250)
+  }
+}
+
+const onHoverCollapse = () => {
+  if (isCollapsed.value) {
+    sidebarWidth.value = COLLAPSED_WIDTH
+    isTransitioning.value = true
+    setTimeout(() => { isTransitioning.value = false }, 250)
   }
 }
 
@@ -494,10 +516,7 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.sidebar.transitioning {
-  transition: width 0.2s ease;
+  transition: width 0.25s ease;
 }
 
 /* === Brand Header (Variant B — Bold / Centered) === */
@@ -508,11 +527,23 @@ onUnmounted(() => {
   padding: 24px 14px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
+  transition: padding 0.25s ease, border-color 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar-brand {
+  padding: 18px 0 14px;
+  border-bottom: none;
 }
 
 .sidebar-brand__logo {
   width: 48px;
   height: 48px;
+  transition: width 0.25s ease, height 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar-brand__logo {
+  width: 32px;
+  height: 32px;
 }
 
 .sidebar-brand__text {
@@ -521,12 +552,22 @@ onUnmounted(() => {
   font-weight: 700;
   color: #edf3ff;
   letter-spacing: 0.02em;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar-brand__text {
+  display: none;
 }
 
 /* === New Feature Button === */
 .sidebar-section {
   padding: 0 12px 12px;
   flex-shrink: 0;
+  transition: padding 0.25s ease, opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar-section {
+  display: none;
 }
 
 /* === Runtime / Model Box === */
@@ -537,6 +578,11 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 14px;
   flex-shrink: 0;
+  transition: margin 0.25s ease, padding 0.25s ease, opacity 0.15s ease;
+}
+
+.sidebar.collapsed .runtime-box {
+  display: none;
 }
 
 .runtime-box__label {
@@ -563,6 +609,11 @@ onUnmounted(() => {
 .sidebar__section {
   padding: 0 12px 12px;
   flex-shrink: 0;
+  transition: padding 0.25s ease, opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar__section {
+  display: none;
 }
 
 /* === Search === */
@@ -599,6 +650,13 @@ onUnmounted(() => {
   gap: 8px;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  transition: padding 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar-list {
+  padding: 8px 0;
+  align-items: center;
+  gap: 10px;
 }
 
 .sidebar-list::-webkit-scrollbar {
@@ -638,6 +696,68 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* === Feature Mini (collapsed) === */
+.feature-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.feature-mini:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.feature-mini.is-active {
+  background: rgba(91, 131, 255, 0.15);
+}
+
+.feature-mini .status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.feature-mini .status-dot.idle { background: #666; }
+.feature-mini .status-dot.running { background: #4fc3f7; animation: pulse 1.5s infinite; }
+.feature-mini .status-dot.blocked { background: #f59e0b; }
+.feature-mini .status-dot.waiting_for_qa { background: #8b5cf6; }
+.feature-mini .status-dot.completed { background: #2da160; }
+.feature-mini .status-dot.failed { background: #dd2b0e; }
+.feature-mini .status-dot.cancelled { background: #666; }
+.feature-mini .status-dot.paused { background: #ef6c00; }
+
+.feature-mini__tooltip {
+  display: none;
+  position: absolute;
+  left: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2a37;
+  color: #edf3ff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.feature-mini:hover .feature-mini__tooltip {
+  display: block;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 /* === Loading / Empty === */
@@ -716,6 +836,13 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  transition: padding 0.25s ease, border-color 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar-footer {
+  padding: 10px 0;
+  justify-content: center;
+  border-top: none;
 }
 
 .settings-item {
@@ -728,6 +855,12 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background 0.15s;
   width: 100%;
+}
+
+.sidebar.collapsed .settings-item {
+  justify-content: center;
+  width: auto;
+  padding: 8px;
 }
 
 .settings-item:hover {
