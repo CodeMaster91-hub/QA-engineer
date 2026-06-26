@@ -26,26 +26,28 @@
       <!-- Requirements Coverage -->
       <div class="report-section" v-if="coverageReport.length">
         <h4>Требования</h4>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Статус</th>
-              <th>Кейсы</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="req in coverageReport" :key="req.requirement_id">
-              <td class="req-id">{{ req.requirement_id }}</td>
-              <td>
-                <span :class="['badge', statusClass(req.status)]">
-                  {{ statusIcon(req.status) }} {{ req.status }}
-                </span>
-              </td>
-              <td class="tc-list">{{ formatCases(req.covered_by) }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Статус</th>
+                <th>Кейсы</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="req in coverageReport" :key="req.requirement_id">
+                <td class="req-id">{{ req.requirement_id }}</td>
+                <td>
+                  <span :class="['badge', statusClass(req.status)]">
+                    {{ statusIcon(req.status) }} {{ req.status }}
+                  </span>
+                </td>
+                <td class="tc-list">{{ formatCases(req.covered_by) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Strengths -->
@@ -360,5 +362,9 @@ th {
   color: #999;
   text-align: center;
   padding: 40px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 </style>

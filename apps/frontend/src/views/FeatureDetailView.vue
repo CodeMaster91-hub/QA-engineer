@@ -557,6 +557,8 @@ onUnmounted(() => {
 <style scoped>
 .feature-detail {
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   padding-bottom: 20px;
 }
 
@@ -648,12 +650,8 @@ onUnmounted(() => {
 
 .pipeline-bar-wrapper {
   flex: 1;
-  overflow: visible;
-}
-
-.pipeline-bar-wrapper :deep(.pipeline-bar) {
-  transform: scale(1.1);
-  transform-origin: left center;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .pipeline-controls {

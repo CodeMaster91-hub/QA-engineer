@@ -140,6 +140,8 @@ onUnmounted(() => {
   gap: 0;
   min-height: 400px;
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .split-panel {

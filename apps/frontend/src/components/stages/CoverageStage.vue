@@ -7,24 +7,26 @@
     </div>
 
     <div v-else-if="coverageReport.length" class="coverage-report">
-      <table>
-        <thead>
-          <tr>
-            <th>Requirement</th>
-            <th>Status</th>
-            <th>Covered By</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="req in coverageReport" :key="req.requirement_id">
-            <td class="req-id">{{ req.requirement_id }}</td>
-            <td><span :class="['badge', statusClass(req.status)]">{{ req.status }}</span></td>
-            <td>{{ (req.covered_by || []).join(', ') || '-' }}</td>
-            <td>{{ req.notes || '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Requirement</th>
+              <th>Status</th>
+              <th>Covered By</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="req in coverageReport" :key="req.requirement_id">
+              <td class="req-id">{{ req.requirement_id }}</td>
+              <td><span :class="['badge', statusClass(req.status)]">{{ req.status }}</span></td>
+              <td>{{ (req.covered_by || []).join(', ') || '-' }}</td>
+              <td>{{ req.notes || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div v-else class="empty">Нет данных покрытия</div>
@@ -159,6 +161,10 @@ th {
 .markdown-rendered :deep(table) { width: 100%; border-collapse: collapse; margin: 12px 0; }
 .markdown-rendered :deep(th), .markdown-rendered :deep(td) { padding: 8px 12px; border: 1px solid #eee; text-align: left; }
 .markdown-rendered :deep(th) { background: #f9f9f9; font-weight: 600; }
+
+.table-wrapper {
+  overflow-x: auto;
+}
 
 .empty {
   color: #999;
