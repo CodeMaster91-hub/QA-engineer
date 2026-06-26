@@ -558,6 +558,7 @@ onUnmounted(() => {
 .feature-detail {
   max-width: 1200px;
   margin: 0 auto;
+  padding-right: 20px;
 }
 
 .loading-state,
