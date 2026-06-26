@@ -383,7 +383,6 @@ const onHoverExpand = () => {
     setTimeout(() => { isTransitioning.value = false }, 250)
   }
 }
-}
 
 // Resize
 const startResize = (e: MouseEvent) => {
