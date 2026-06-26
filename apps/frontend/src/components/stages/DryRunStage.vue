@@ -53,6 +53,7 @@ const formatJson = (obj: any) => {
 
 .json-view {
   margin: 0;
+  width: 100%;
   font-family: monospace;
   font-size: 0.85em;
   white-space: pre-wrap;
@@ -61,8 +62,6 @@ const formatJson = (obj: any) => {
   padding: 16px;
   border-radius: 6px;
   border: 1px solid #eee;
-  max-height: 500px;
-  overflow-y: auto;
 }
 
 .empty {

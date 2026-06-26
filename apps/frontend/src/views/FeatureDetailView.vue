@@ -757,6 +757,8 @@ onUnmounted(() => {
 .stage-content :deep(.stage-panel),
 .stage-content :deep(.split-container) {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   overflow-y: auto;
 }
 

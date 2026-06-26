@@ -72,6 +72,10 @@ defineEmits<{
   flex-shrink: 0;
 }
 
+.status-text {
+  flex: 1;
+}
+
 .status-text p {
   margin: 0;
   color: #1b5e20;

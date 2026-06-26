@@ -172,6 +172,7 @@ th {
 .markdown-rendered :deep(th) { background: #f9f9f9; font-weight: 600; }
 
 .table-wrapper {
+  width: 100%;
   overflow-x: auto;
 }
 
