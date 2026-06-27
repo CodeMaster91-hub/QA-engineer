@@ -41,7 +41,7 @@
         <div class="panel-body editor-body">
           <!-- Title -->
           <div class="field">
-            <label>Title</label>
+            <label>Название</label>
             <input
               type="text"
               :value="selectedCase.title"
@@ -52,32 +52,32 @@
           <!-- Priority + Type -->
           <div class="field-row">
             <div class="field">
-              <label>Priority</label>
+              <label>Приоритет</label>
               <select
                 :value="selectedCase.priority"
                 @change="updateField('priority', ($event.target as HTMLSelectElement).value)"
               >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="critical">Критический</option>
+                <option value="high">Высокий</option>
+                <option value="medium">Средний</option>
+                <option value="low">Низкий</option>
               </select>
             </div>
             <div class="field">
-              <label>Type</label>
+              <label>Тип</label>
               <select
                 :value="selectedCase.type"
                 @change="updateField('type', ($event.target as HTMLSelectElement).value)"
               >
-                <option value="positive">Positive</option>
-                <option value="negative">Negative</option>
-                <option value="validation">Validation</option>
-                <option value="boundary">Boundary</option>
-                <option value="permission">Permission</option>
-                <option value="integration">Integration</option>
-                <option value="regression">Regression</option>
-                <option value="smoke">Smoke</option>
-                <option value="other">Other</option>
+                <option value="positive">Позитивный</option>
+                <option value="negative">Негативный</option>
+                <option value="validation">Валидация</option>
+                <option value="boundary">Граничный</option>
+                <option value="permission">Права доступа</option>
+                <option value="integration">Интеграционный</option>
+                <option value="regression">Регрессия</option>
+                <option value="smoke">Дымовой</option>
+                <option value="other">Другой</option>
               </select>
             </div>
           </div>
@@ -85,33 +85,33 @@
           <!-- Status -->
           <div class="field-row">
             <div class="field">
-              <label>Status</label>
+              <label>Статус</label>
               <select
                 :value="selectedCase.status"
                 @change="updateField('status', ($event.target as HTMLSelectElement).value)"
               >
-                <option value="draft">Draft</option>
-                <option value="reviewed">Reviewed</option>
-                <option value="approved">Approved</option>
-                <option value="needs_clarification">Needs Clarification</option>
+                <option value="draft">Черновик</option>
+                <option value="reviewed">На ревью</option>
+                <option value="approved">Одобрен</option>
+                <option value="needs_clarification">Требует уточнения</option>
               </select>
             </div>
             <div class="field">
-              <label>Automation</label>
+              <label>Автоматизация</label>
               <label class="checkbox-label">
                 <input
                   type="checkbox"
                   :checked="selectedCase.automation_candidate"
                   @change="updateField('automation_candidate', ($event.target as HTMLInputElement).checked)"
                 />
-                Candidate
+                Кандидат
               </label>
             </div>
           </div>
 
           <!-- Preconditions -->
           <div class="field">
-            <label>Preconditions</label>
+            <label>Предусловия</label>
             <textarea
               :value="selectedCase.preconditions"
               @input="updateField('preconditions', ($event.target as HTMLTextAreaElement).value)"
@@ -121,7 +121,7 @@
 
           <!-- Final Expected Result -->
           <div class="field">
-            <label>Final Expected Result</label>
+            <label>Финальный ожидаемый результат</label>
             <textarea
               :value="selectedCase.final_expected_result"
               @input="updateField('final_expected_result', ($event.target as HTMLTextAreaElement).value)"
@@ -132,7 +132,7 @@
           <!-- Steps -->
           <div class="field">
             <div class="field-header">
-              <label>Steps</label>
+              <label>Шаги</label>
               <button class="btn-add" @click="addStep">+ Добавить шаг</button>
             </div>
             <div v-if="selectedCase.steps.length" class="steps-list">
@@ -180,7 +180,7 @@
 
           <!-- Requirements -->
           <div class="field">
-            <label>Requirements</label>
+            <label>Требования</label>
             <div class="tags-container">
               <span v-for="(req, rIdx) in selectedCase.requirement_ids" :key="rIdx" class="tag">
                 {{ req }}
@@ -197,7 +197,7 @@
 
           <!-- Tags -->
           <div class="field">
-            <label>Tags</label>
+            <label>Теги</label>
             <div class="tags-container">
               <span v-for="(tag, tIdx) in selectedCase.tags" :key="tIdx" class="tag">
                 {{ tag }}
@@ -214,7 +214,7 @@
 
           <!-- Test Data -->
           <div class="field">
-            <label>Test Data</label>
+            <label>Тестовые данные</label>
             <div class="tags-container">
               <span v-for="(td, dIdx) in selectedCase.test_data" :key="dIdx" class="tag">
                 {{ td }}
