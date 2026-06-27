@@ -49,6 +49,10 @@ export class TestRailService {
     return this.configService.get<string>('TESTRAIL_API_KEY', '');
   }
 
+  private getEmail(): string {
+    return this.configService.get<string>('TESTRAIL_EMAIL', '');
+  }
+
   private isMock(): boolean {
     return this.configService.get<string>('TESTRAIL_MOCK', 'true') === 'true';
   }
@@ -87,8 +91,9 @@ export class TestRailService {
 
     const baseUrl = this.getBaseUrl();
     const apiKey = this.getApiKey();
+    const email = this.getEmail();
 
-    const auth = Buffer.from(`api:${apiKey}`).toString('base64');
+    const auth = Buffer.from(`${email}:${apiKey}`).toString('base64');
 
     const response = await fetch(`${baseUrl}/index.php?/api/v2/${endpoint}`, {
       method,

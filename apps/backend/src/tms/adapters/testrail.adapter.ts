@@ -15,12 +15,14 @@ export class TestRailAdapter extends TmsAdapter {
 
   private baseUrl: string;
   private apiKey: string;
+  private email: string;
   private isMock: boolean;
 
   constructor(private configService: ConfigService) {
     super();
     this.baseUrl = this.configService.get<string>('TESTRAIL_URL', '');
     this.apiKey = this.configService.get<string>('TESTRAIL_API_KEY', '');
+    this.email = this.configService.get<string>('TESTRAIL_EMAIL', '');
     this.isMock = this.configService.get<string>('TESTRAIL_MOCK', 'true') === 'true';
   }
 
@@ -199,7 +201,7 @@ export class TestRailAdapter extends TmsAdapter {
     endpoint: string,
     body?: any,
   ): Promise<T> {
-    const auth = Buffer.from(`api:${this.apiKey}`).toString('base64');
+    const auth = Buffer.from(`${this.email}:${this.apiKey}`).toString('base64');
 
     const response = await fetch(
       `${this.baseUrl}/index.php?/api/v2/${endpoint}`,
