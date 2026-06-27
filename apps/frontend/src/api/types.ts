@@ -73,6 +73,43 @@ export interface Pipeline {
 
 export type ArtifactType = 'source' | 'requirements' | 'testplan' | 'testcases' | 'coverage' | 'review' | 'dry_run';
 
+export interface DryRunCase {
+  id: string;
+  title: string;
+  section?: string;
+  priority?: string;
+  type?: string;
+  status: 'approved' | 'draft';
+  targetSectionId: string | null;
+  targetSectionName: string | null;
+  published: boolean;
+}
+
+export interface DryRunSection {
+  id: string;
+  name: string;
+}
+
+export interface DryRunNewSection {
+  name: string;
+  parentSectionId: string | null;
+}
+
+export interface DryRunArtifact {
+  sections: {
+    existing: DryRunSection[];
+    new: DryRunNewSection[];
+  };
+  cases: DryRunCase[];
+  summary: {
+    total: number;
+    approved: number;
+    draft: number;
+    existingSections: number;
+    newSections: number;
+  };
+}
+
 export interface Artifact {
   id: string;
   featureId: string;

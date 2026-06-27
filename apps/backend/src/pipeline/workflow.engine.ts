@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { LLMService } from '../agents/llm.service';
 import { FeaturesService } from '../features/features.service';
+import { TmsService } from '../tms/tms.service';
 import {
   PipelineStage,
   PIPELINE_STAGE_ORDER,
@@ -24,6 +26,8 @@ export class WorkflowEngine {
   constructor(
     private llmService: LLMService,
     private featuresService: FeaturesService,
+    private tmsService: TmsService,
+    private configService: ConfigService,
   ) {}
 
   private parseJsonResponse(content: string): any {
@@ -552,7 +556,6 @@ export class WorkflowEngine {
       ArtifactType.TESTCASES,
     );
 
-    // Валидация: тест-кейсы должны существовать
     if (!testcasesArtifact || !testcasesArtifact.content?.cases?.length) {
       return {
         stage: PipelineStage.DRY_RUN_COMPLETED,
@@ -562,17 +565,68 @@ export class WorkflowEngine {
       };
     }
 
+    const cases = testcasesArtifact.content.cases;
+
+    const projectId = this.configService.get<string>('TESTRAIL_PROJECT_ID');
+    let existingSections: Array<{ id: string; name: string }> = [];
+
+    if (projectId) {
+      try {
+        const tree = await this.tmsService.getTree(projectId);
+        existingSections = tree
+          .filter((node) => node.type === 'section')
+          .map((node) => ({ id: node.id, name: node.name }));
+      } catch (error) {
+        this.logger.warn(`Failed to fetch TMS sections: ${error.message}`);
+      }
+    }
+
     const response = await this.llmService.complete(
       PipelineStage.DRY_RUN_COMPLETED,
       [
         {
           role: 'system',
-          content:
-            'Выполни пробный запуск тест-кейсов. Верни только JSON без markdown-обёртки с результатами.',
+          content: `Ты QA-инженер. Проанализируй тест-кейсы и существующие секции TestRail.
+Распредели каждый тест-кейс по подходящей секции.
+
+Для каждого кейса укажи:
+- targetSectionId — ID существующей секции (если подходящая есть)
+- targetSectionName — название новой секции (если подходящей нет)
+- status — "approved" (для публикации) или "draft" (оставить как черновик)
+
+Если кейс можно отнести к существующей секции — сделай это.
+Если подходящей секции нет — предложи создать новую.
+Черновики (draft) не публикуются, но сохраняются как артефакты.
+
+Верни только JSON без markdown-обёртки:
+{
+  "cases": [
+    {
+      "id": "TC-001",
+      "title": "...",
+      "status": "approved",
+      "targetSectionId": "123",
+      "targetSectionName": null
+    }
+  ],
+  "newSections": [
+    { "name": "Название новой секции", "parentSectionId": null }
+  ]
+}`,
         },
         {
           role: 'user',
-          content: JSON.stringify(testcasesArtifact?.content || {}),
+          content: JSON.stringify({
+            existingSections,
+            testCases: cases.map((c: any) => ({
+              id: c.id,
+              title: c.title,
+              section: c.section,
+              priority: c.priority,
+              type: c.type,
+              steps: c.steps,
+            })),
+          }),
         },
       ],
     );
@@ -581,20 +635,50 @@ export class WorkflowEngine {
     try {
       parsed = this.parseJsonResponse(response.content);
     } catch {
-      parsed = { dryRun: response.content };
+      parsed = { cases: [], newSections: [] };
     }
+
+    const mergedCases = cases.map((original: any) => {
+      const llmResult = parsed.cases?.find((c: any) => c.id === original.id);
+      const status = llmResult?.status || 'draft';
+      return {
+        ...original,
+        status,
+        targetSectionId: llmResult?.targetSectionId || null,
+        targetSectionName: llmResult?.targetSectionName || null,
+        published: false,
+      };
+    });
+
+    const approvedCount = mergedCases.filter((c: any) => c.status === 'approved').length;
+    const draftCount = mergedCases.filter((c: any) => c.status === 'draft').length;
+    const newSections = parsed.newSections || [];
+
+    const dryRunArtifact = {
+      sections: {
+        existing: existingSections,
+        new: newSections,
+      },
+      cases: mergedCases,
+      summary: {
+        total: mergedCases.length,
+        approved: approvedCount,
+        draft: draftCount,
+        existingSections: existingSections.length,
+        newSections: newSections.length,
+      },
+    };
 
     await this.featuresService.upsertArtifact(
       featureId,
       ArtifactType.DRY_RUN,
-      parsed,
+      dryRunArtifact,
     );
 
-    // Ждём апрува перед publish
     return {
       stage: PipelineStage.DRY_RUN_COMPLETED,
       status: 'waiting_for_qa',
-      output: parsed,
+      output: dryRunArtifact,
       timestamp: new Date(),
     };
   }

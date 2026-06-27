@@ -9,6 +9,7 @@ import { FeaturesModule } from '../features/features.module';
 import { AgentsModule } from '../agents/agents.module';
 import { EventsModule } from '../events/events.module';
 import { QueueModule } from '../common/queue/queue.module';
+import { TmsModule } from '../tms/tms.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { QueueModule } from '../common/queue/queue.module';
     FeaturesModule,
     AgentsModule,
     EventsModule,
+    TmsModule,
   ],
   controllers: [PipelineController],
   providers: [PipelineService, PipelineProcessor, WorkflowEngine],

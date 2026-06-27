@@ -41,6 +41,10 @@ export class TestRailProcessor {
     try {
       const feature = await this.featuresService.findBySlug(featureSlug);
 
+      const dryRunArtifact = feature.artifacts?.find(
+        (a) => a.type === ArtifactType.DRY_RUN,
+      );
+
       const testcasesArtifact = feature.artifacts?.find(
         (a) => a.type === ArtifactType.TESTCASES,
       );
@@ -49,40 +53,98 @@ export class TestRailProcessor {
         throw new Error(`Test cases not found for feature: ${featureSlug}`);
       }
 
-      const testcases = testcasesArtifact.content?.testcases || [];
+      const allCases = testcasesArtifact.content?.cases || [];
 
-      let targetSectionId = sectionId;
-      if (!targetSectionId) {
-        const section = await this.testrailService.createSection(
-          projectId,
-          suiteId,
-          feature.title,
-          `Auto-generated section for feature: ${featureSlug}`,
-        );
-        targetSectionId = section.id;
+      const dryRunData = dryRunArtifact?.content;
+      const approvedCases = dryRunData?.cases?.filter(
+        (c: any) => c.status === 'approved',
+      ) || allCases;
+
+      const sectionMap: Record<string, number> = {};
+
+      if (sectionId) {
+        sectionMap['__default__'] = sectionId;
       }
 
-      const totalCases = testcases.length;
-      for (let i = 0; i < totalCases; i++) {
-        const testcase = testcases[i];
+      const newSections = dryRunData?.sections?.new || [];
+      for (const newSection of newSections) {
+        const created = await this.testrailService.createSection(
+          projectId,
+          suiteId,
+          newSection.name,
+          `Auto-generated section for feature: ${featureSlug}`,
+        );
+        sectionMap[newSection.name] = created.id;
+      }
 
-        await this.testrailService.createCase(targetSectionId, {
-          title: testcase.title || `Test Case ${i + 1}`,
-          type_id: testcase.type_id || 1,
-          priority_id: testcase.priority_id || 2,
-          estimate: testcase.estimate || '5m',
-          refs: testcase.refs,
-        });
+      let publishedCount = 0;
+      const errors: string[] = [];
+
+      for (const testCase of approvedCases) {
+        try {
+          let targetSectionId: number;
+
+          if (testCase.targetSectionId) {
+            targetSectionId = parseInt(testCase.targetSectionId, 10);
+          } else if (testCase.targetSectionName && sectionMap[testCase.targetSectionName]) {
+            targetSectionId = sectionMap[testCase.targetSectionName];
+          } else if (sectionMap['__default__']) {
+            targetSectionId = sectionMap['__default__'];
+          } else {
+            const defaultSection = await this.testrailService.createSection(
+              projectId,
+              suiteId,
+              feature.title,
+              `Auto-generated section for feature: ${featureSlug}`,
+            );
+            targetSectionId = defaultSection.id;
+            sectionMap['__default__'] = targetSectionId;
+          }
+
+          const priorityMap: Record<string, number> = {
+            low: 1,
+            medium: 2,
+            high: 3,
+            critical: 4,
+          };
+
+          await this.testrailService.createCase(targetSectionId, {
+            title: testCase.title,
+            type_id: 1,
+            priority_id: priorityMap[testCase.priority?.toLowerCase()] || 2,
+            estimate: '5m',
+          });
+
+          publishedCount++;
+        } catch (error) {
+          errors.push(`Failed to publish case "${testCase.title}": ${error.message}`);
+        }
+      }
+
+      if (dryRunArtifact && dryRunData) {
+        const updatedCases = dryRunData.cases.map((c: any) => ({
+          ...c,
+          published: c.status === 'approved',
+        }));
+        dryRunArtifact.content = {
+          ...dryRunData,
+          cases: updatedCases,
+        };
+        await this.featuresService.upsertArtifact(
+          feature.id,
+          ArtifactType.DRY_RUN,
+          dryRunArtifact.content,
+        );
       }
 
       this.logger.log(
-        `Published ${totalCases} test cases for feature: ${featureSlug}`,
+        `Published ${publishedCount} test cases for feature: ${featureSlug}`,
       );
 
       return {
         featureSlug,
-        sectionId: targetSectionId,
-        casesPublished: totalCases,
+        casesPublished: publishedCount,
+        errors: errors.length > 0 ? errors : undefined,
       };
     } catch (error) {
       this.logger.error(`TestRail publish failed: ${error.message}`);

@@ -1,12 +1,98 @@
 <template>
   <div class="stage-panel">
     <div class="panel-header">
-      <h3>Dry Run</h3>
+      <h3>Dry Run — Пробный запуск</h3>
     </div>
     <div class="panel-body">
-      <div v-if="dryRunContent" class="dryrun-content">
-        <pre class="json-view">{{ formatJson(dryRunContent) }}</pre>
-      </div>
+      <template v-if="dryRunData">
+        <div class="summary-cards">
+          <div class="card">
+            <div class="value">{{ summary.total }}</div>
+            <div class="label">Всего кейсов</div>
+          </div>
+          <div class="card card-approved">
+            <div class="value">{{ summary.approved }}</div>
+            <div class="label">Апрувнуты</div>
+          </div>
+          <div class="card card-draft">
+            <div class="value">{{ summary.draft }}</div>
+            <div class="label">Черновики</div>
+          </div>
+          <div class="card card-sections">
+            <div class="value">{{ summary.existingSections }} + {{ summary.newSections }}</div>
+            <div class="label">Секции</div>
+          </div>
+        </div>
+
+        <div class="split-container">
+          <div class="cases-panel">
+            <div class="panel-title">Тест-кейсы ({{ cases.length }})</div>
+            <div class="cases-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Секция</th>
+                    <th>Статус</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="tc in cases" :key="tc.id">
+                    <td class="tc-id">{{ tc.id }}</td>
+                    <td>{{ tc.title }}</td>
+                    <td>
+                      <span v-if="tc.targetSectionId" class="section-existing">
+                        {{ getSectionName(tc.targetSectionId) }}
+                      </span>
+                      <span v-else-if="tc.targetSectionName" class="section-new">
+                        [Новая] {{ tc.targetSectionName }}
+                      </span>
+                      <span v-else class="section-unassigned">—</span>
+                    </td>
+                    <td>
+                      <span :class="['badge', `badge-${tc.status}`]">
+                        {{ tc.status === 'approved' ? 'Апрув' : 'Драфт' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="sections-panel">
+            <div class="panel-title">Секции TestRail</div>
+
+            <div v-if="existingSections.length" class="section-group">
+              <div class="section-group-label">Существующие</div>
+              <div
+                v-for="sec in existingSections"
+                :key="sec.id"
+                class="section-item"
+              >
+                <span class="section-dot section-dot-existing"></span>
+                {{ sec.name }}
+                <span class="section-count">{{ getCasesForSection(sec.id).length }}</span>
+              </div>
+            </div>
+
+            <div v-if="newSections.length" class="section-group">
+              <div class="section-group-label">Новые (к созданию)</div>
+              <div
+                v-for="(sec, idx) in newSections"
+                :key="idx"
+                class="section-item"
+              >
+                <span class="section-dot section-dot-new"></span>
+                {{ sec.name }}
+                <span class="section-count">{{ getCasesForNewSection(sec.name).length }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <div v-else class="empty">Dry run не выполнялся</div>
     </div>
   </div>
@@ -14,20 +100,39 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Artifact } from '@/api/types'
+import type { Artifact, DryRunArtifact } from '@/api/types'
 
 const props = defineProps<{
   artifact: Artifact | null
 }>()
 
-const dryRunContent = computed(() => props.artifact?.content || null)
+const dryRunData = computed<DryRunArtifact | null>(() => {
+  const content = props.artifact?.content
+  if (!content?.cases) return null
+  return content as unknown as DryRunArtifact
+})
 
-const formatJson = (obj: any) => {
-  try {
-    return JSON.stringify(obj, null, 2)
-  } catch {
-    return String(obj)
-  }
+const summary = computed(() => {
+  return dryRunData.value?.summary || { total: 0, approved: 0, draft: 0, existingSections: 0, newSections: 0 }
+})
+
+const cases = computed(() => dryRunData.value?.cases || [])
+
+const existingSections = computed(() => dryRunData.value?.sections?.existing || [])
+
+const newSections = computed(() => dryRunData.value?.sections?.new || [])
+
+const getSectionName = (sectionId: string) => {
+  const section = existingSections.value.find((s) => s.id === sectionId)
+  return section?.name || `#${sectionId}`
+}
+
+const getCasesForSection = (sectionId: string) => {
+  return cases.value.filter((c) => c.targetSectionId === sectionId)
+}
+
+const getCasesForNewSection = (sectionName: string) => {
+  return cases.value.filter((c) => c.targetSectionName === sectionName)
 }
 </script>
 
@@ -63,21 +168,170 @@ const formatJson = (obj: any) => {
   min-height: 0;
 }
 
-.dryrun-content {
-  width: 100%;
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.json-view {
-  margin: 0;
-  width: 100%;
-  font-family: monospace;
-  font-size: 0.85em;
-  white-space: pre-wrap;
-  word-break: break-word;
+.card {
   background: #f9f9f9;
+  border-radius: 8px;
   padding: 16px;
-  border-radius: 6px;
-  border: 1px solid #eee;
+  text-align: center;
+}
+
+.card .value {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.card .label {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 4px;
+}
+
+.card-approved .value {
+  color: #2da160;
+}
+
+.card-draft .value {
+  color: #999;
+}
+
+.card-sections .value {
+  color: #1565c0;
+}
+
+.split-container {
+  display: flex;
+  gap: 16px;
+}
+
+.cases-panel {
+  flex: 65;
+  min-width: 0;
+}
+
+.sections-panel {
+  flex: 35;
+  border-left: 1px solid #eee;
+  padding-left: 16px;
+}
+
+.panel-title {
+  font-weight: 600;
+  color: #303030;
+  margin-bottom: 12px;
+}
+
+.cases-table {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  font-weight: 600;
+  color: #303030;
+  background: #f9f9f9;
+}
+
+.tc-id {
+  font-family: monospace;
+  font-weight: 500;
+  color: #1068bf;
+}
+
+.section-existing {
+  color: #2da160;
+  font-size: 0.9em;
+}
+
+.section-new {
+  color: #1565c0;
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.section-unassigned {
+  color: #ccc;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.badge-approved {
+  background: #e8f5e9;
+  color: #2da160;
+}
+
+.badge-draft {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.section-group {
+  margin-bottom: 16px;
+}
+
+.section-group-label {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.section-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 0.9em;
+}
+
+.section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.section-dot-existing {
+  background: #2da160;
+}
+
+.section-dot-new {
+  background: #1565c0;
+}
+
+.section-count {
+  margin-left: auto;
+  background: #f0f0f0;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.8em;
+  color: #666;
 }
 
 .empty {

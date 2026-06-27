@@ -75,6 +75,14 @@ Restart stage: перезапуск конкретного этапа (`POST /pi
 
 Questions persistence: вопросы сохраняются в `pipeline.questions` и остаются как артефакт после continue/approve.
 
+### Dry Run — Пробный запуск
+
+Этап `dry_run_completed` (hard stop) распределяет тест-кейсы по секциям TMS:
+- Запрашивает существующие секции через `TmsService.getTree()`
+- LLM распределяет кейсы по секциям (существующие или новые)
+- Кейсы со статусом `approved` публикуются, `draft` — остаются как черновики
+- Артефакт `dry_run` содержит: `{ sections: { existing, new }, cases: [], summary: {} }`
+
 ## Артефакты
 
 | Тип | Формат | Рендер |
@@ -85,7 +93,7 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 | testcases | `{ cases: [] }` | JSON → таблица |
 | coverage | `{ coverage, coverage_matrix_markdown, gaps }` | JSON + markdown |
 | review | `{ ... }` | JSON |
-| dry_run | `{ ... }` | JSON |
+| dry_run | `{ sections: { existing, new }, cases: [], summary: {} }` | Summary cards + таблица + секции |
 
 ## UI-паттерны
 

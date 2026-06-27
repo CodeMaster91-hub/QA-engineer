@@ -140,9 +140,16 @@ export class LLMService {
       mockData = {
         review: { quality: 'good', completeness: 'high', issues: [] },
       };
-    } else if (systemPrompt.includes('пробный') || systemPrompt.includes('dry') || systemPrompt.includes('Dry')) {
+    } else if (systemPrompt.includes('пробный') || systemPrompt.includes('dry') || systemPrompt.includes('Dry') || systemPrompt.includes('Распредели')) {
       mockData = {
-        dryRun: { results: [], passed: true },
+        cases: [
+          { id: 'TC-001', title: 'Редирект проверенного пользователя', status: 'approved', targetSectionId: '1', targetSectionName: null },
+          { id: 'TC-002', title: 'Блокировка при заблокированном домене', status: 'approved', targetSectionId: '1', targetSectionName: null },
+          { id: 'TC-003', title: 'Отсутствие редиректа без категории', status: 'draft', targetSectionId: null, targetSectionName: 'Валидация формы' },
+        ],
+        newSections: [
+          { name: 'Валидация формы', parentSectionId: null },
+        ],
       };
     } else {
       mockData = { message: 'Mock response' };
