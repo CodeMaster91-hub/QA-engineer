@@ -125,6 +125,13 @@ Requirements restart: при перезапуске `requirements_extracted` LLM
 Настройки интерфейса хранятся в `localStorage` (не в БД):
 - `show_logs` — показывать/скрывать секцию логов (`Settings → Интерфейс`)
 
+## Features
+
+- **Slug generation**: `generateFallbackSlug()` транслитерирует кириллицу → lowercase → замена пробелов на `-` → обрезка до 50 символов
+- **Уникальность slug**: `generateUniqueSlug()` проверяет БД и добавляет суффикс `-2`, `-3`, etc. при повторных загрузках того же источника
+- **createWithSource()**: автоматически генерирует уникальный slug, каждая фича полностью изолирована
+- **create()**: ручное создание через `POST /features` — slug передаётся явно, дубликат → ConflictException
+
 ## LLM и очередь
 
 - **LLMService.complete()** принимает `PipelineStage` (строку-enum) в качестве первого аргумента — НЕ объект
