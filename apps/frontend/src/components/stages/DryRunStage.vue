@@ -79,29 +79,31 @@
               <h3>Секции TestRail</h3>
             </div>
             <div class="panel-body">
-              <div v-if="existingSections.length" class="section-group">
+              <div v-if="sectionTree.length" class="section-group">
                 <div class="section-group-label">Существующие</div>
                 <div
-                  v-for="sec in existingSections"
+                  v-for="sec in sectionTree"
                   :key="sec.id"
                   class="section-item"
+                  :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
                 >
-                  <span class="section-dot section-dot-existing"></span>
-                  {{ sec.name }}
-                  <span class="section-count">{{ getCasesForSection(sec.id).length }}</span>
+                  <span class="folder-icon">{{ sec.childrenCount > 0 ? '📂' : '📄' }}</span>
+                  <span>{{ sec.name }}</span>
+                  <span class="section-count">{{ sec.caseCount }}</span>
                 </div>
               </div>
 
               <div v-if="newSections.length" class="section-group">
                 <div class="section-group-label">Новые (к созданию)</div>
                 <div
-                  v-for="(sec, idx) in newSections"
+                  v-for="(sec, idx) in newSectionsFlat"
                   :key="idx"
                   class="section-item"
+                  :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
                 >
-                  <span class="section-dot section-dot-new"></span>
-                  {{ sec.name }}
-                  <span class="section-count">{{ getCasesForNewSection(sec.name).length }}</span>
+                  <span class="folder-icon">{{ sec.childrenCount > 0 ? '📂' : '📄' }}</span>
+                  <span class="section-new-label">{{ sec.name }}</span>
+                  <span class="section-count">{{ sec.caseCount }}</span>
                 </div>
               </div>
             </div>
@@ -139,6 +141,63 @@ const cases = computed(() => dryRunData.value?.cases || [])
 const existingSections = computed(() => dryRunData.value?.sections?.existing || [])
 
 const newSections = computed(() => dryRunData.value?.sections?.new || [])
+
+const sectionTree = computed(() => {
+  const flat = existingSections.value
+  if (!flat.length) return []
+
+  const childMap = new Map<string | null, typeof flat>()
+  for (const sec of flat) {
+    const key = sec.parentId || '__root__'
+    if (!childMap.has(key)) childMap.set(key, [])
+    childMap.get(key)!.push(sec)
+  }
+
+  const childCountMap = new Map<string, number>()
+  for (const sec of flat) {
+    if (sec.parentId) {
+      childCountMap.set(sec.parentId, (childCountMap.get(sec.parentId) || 0) + 1)
+    }
+  }
+
+  const depthMap = new Map<string, number>()
+  const getDepth = (id: string): number => {
+    if (depthMap.has(id)) return depthMap.get(id)!
+    const sec = flat.find(s => s.id === id)
+    if (!sec || !sec.parentId) { depthMap.set(id, 0); return 0 }
+    const d = getDepth(sec.parentId) + 1
+    depthMap.set(id, d)
+    return d
+  }
+
+  const ordered: Array<{ id: string; name: string; depth: number; childrenCount: number; caseCount: number }> = []
+  const walk = (parentId: string | null) => {
+    const children = childMap.get(parentId || '__root__') || []
+    for (const sec of children) {
+      ordered.push({
+        id: sec.id,
+        name: sec.name,
+        depth: getDepth(sec.id),
+        childrenCount: childCountMap.get(sec.id) || 0,
+        caseCount: getCasesForSection(sec.id).length,
+      })
+      walk(sec.id)
+    }
+  }
+  walk(null)
+  return ordered
+})
+
+const newSectionsFlat = computed(() => {
+  const existingIds = new Set(existingSections.value.map(s => s.id))
+  return newSections.value.map((sec, idx) => ({
+    id: `__new__${idx}`,
+    name: sec.name,
+    depth: sec.parentSectionId && existingIds.has(sec.parentSectionId) ? 1 : 0,
+    childrenCount: 0,
+    caseCount: getCasesForNewSection(sec.name).length,
+  }))
+})
 
 const getSectionName = (sectionId: string) => {
   const section = existingSections.value.find((s) => s.id === sectionId)
@@ -440,24 +499,20 @@ th {
 .section-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 6px;
+  padding: 5px 0;
   font-size: 0.9em;
 }
 
-.section-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.folder-icon {
   flex-shrink: 0;
+  font-size: 0.95em;
+  line-height: 1;
 }
 
-.section-dot-existing {
-  background: #2da160;
-}
-
-.section-dot-new {
-  background: #1565c0;
+.section-new-label {
+  color: #1565c0;
+  font-style: italic;
 }
 
 .section-count {

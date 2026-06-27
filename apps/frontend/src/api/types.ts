@@ -88,6 +88,7 @@ export interface DryRunCase {
 export interface DryRunSection {
   id: string;
   name: string;
+  parentId: string | null;
 }
 
 export interface DryRunNewSection {

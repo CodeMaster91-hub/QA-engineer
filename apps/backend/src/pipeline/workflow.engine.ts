@@ -648,14 +648,14 @@ ${JSON.stringify(existingRequirements, null, 2)}
     const cases = testcasesArtifact.content.cases;
 
     const projectId = this.configService.get<string>('TESTRAIL_PROJECT_ID');
-    let existingSections: Array<{ id: string; name: string }> = [];
+    let existingSections: Array<{ id: string; name: string; parentId: string | null }> = [];
 
     if (projectId) {
       try {
         const tree = await this.tmsService.getTree(projectId);
         existingSections = tree
           .filter((node) => node.type === 'section')
-          .map((node) => ({ id: node.id, name: node.name }));
+          .map((node) => ({ id: node.id, name: node.name, parentId: node.parentId || null }));
       } catch (error) {
         this.logger.warn(`Failed to fetch TMS sections: ${error.message}`);
       }
