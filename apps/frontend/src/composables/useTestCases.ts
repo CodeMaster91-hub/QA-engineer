@@ -21,7 +21,11 @@ export function useTestCases(artifact: Artifact | null) {
   }
 
   function syncFromArtifact(art: Artifact | null) {
-    cases.value = art?.content?.cases || [];
+    const raw = art?.content?.cases || [];
+    cases.value = raw.map((c: any) => ({
+      ...c,
+      automation_candidate: c.automation_candidate ?? false,
+    }));
     takeSnapshot();
     selectedIndex.value = null;
   }
