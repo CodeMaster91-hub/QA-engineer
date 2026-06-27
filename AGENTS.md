@@ -77,6 +77,8 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 
 Answer Questions: `answerQuestions()` переводит pipeline на **следующий stage**, не перезапуская текущий. LLM получает контекст существующих артефактов (REQ и т.д.) при restart.
 
+Requirements restart: при перезапуске `requirements_extracted` LLM получает существующие требования и должен вернуть их БЕЗ ИЗМЕНЕНИЙ, если всё покрыто. Дублирование запрещено.
+
 ### Dry Run — Пробный запуск
 
 Этап `dry_run_completed` (hard stop) распределяет тест-кейсы по секциям TMS:
