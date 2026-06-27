@@ -213,7 +213,6 @@ export class PipelineService {
     };
 
     pipeline.blockedStage = null;
-    pipeline.questions = [];
 
     if (nextStage) {
       pipeline.currentStage = nextStage;
@@ -259,6 +258,11 @@ export class PipelineService {
 
     // Удалить результат только этого этапа
     delete pipeline.stageResults[stage];
+
+    // При перезапуске requirements — очистить вопросы
+    if (stage === PipelineStage.REQUIREMENTS_EXTRACTED) {
+      pipeline.questions = [];
+    }
 
     // Установить текущий этап
     pipeline.currentStage = stage;

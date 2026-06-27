@@ -276,7 +276,7 @@ ${JSON.stringify(existingRequirements, null, 2)}
     await this.featuresService.upsertArtifact(
       featureId,
       ArtifactType.REQUIREMENTS,
-      { requirements },
+      { requirements, open_questions: openQuestions },
     );
 
     // Если есть вопросы — блокируем pipeline
