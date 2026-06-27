@@ -68,7 +68,7 @@
               @click="cancelPipeline"
               class="btn btn-danger"
             >
-              ⏹ Cancel
+              ⏹ Стоп
             </button>
 
             <button
@@ -83,9 +83,6 @@
 
         <div class="pipeline-info">
           <span v-if="pipeline.error" class="pipeline-error">{{ pipeline.error }}</span>
-          <span v-if="pipeline.status === 'running'" class="pipeline-progress">
-            Stage {{ currentStageIndex + 1 }} of {{ totalStages }}
-          </span>
         </div>
       </div>
 
@@ -243,14 +240,6 @@ const pipelineStages = computed(() => {
     return { key: stageUI.key, label: stageUI.label, status }
   })
 })
-
-const currentStageIndex = computed(() => {
-  if (!pipeline.value) return 0
-  const idx = PIPELINE_STAGES_UI.findIndex(s => s.backendStage === pipeline.value!.currentStage)
-  return idx >= 0 ? idx : 0
-})
-
-const totalStages = computed(() => PIPELINE_STAGES_UI.length)
 
 const canRun = computed(() => {
   if (!pipeline.value) return true
@@ -676,11 +665,6 @@ onUnmounted(() => {
 .pipeline-error {
   color: #dd2b0e;
   font-size: 0.9em;
-}
-
-.pipeline-progress {
-  color: #666;
-  font-size: 0.85em;
 }
 
 .controls {
