@@ -559,6 +559,7 @@ onUnmounted(() => {
   font-weight: 600;
   color: #1068bf;
   min-width: 60px;
+  white-space: nowrap;
 }
 
 .tc-title {

@@ -389,6 +389,7 @@ th {
   font-family: monospace;
   font-weight: 500;
   color: #1068bf;
+  white-space: nowrap;
 }
 
 .section-existing {
