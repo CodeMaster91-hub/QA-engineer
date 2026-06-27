@@ -1067,7 +1067,7 @@ onUnmounted(() => {
 }
 
 .file-icon { font-size: 24px; }
-.file-hint { font-size: 0.85em; color: #5f6b7a; }
+.file-hint { font-size: 0.85em; color: #000; }
 
 .file-info {
   display: flex;
@@ -1075,7 +1075,7 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.file-name { font-weight: 500; }
+.file-name { font-weight: 500; color: #1a1a2e; }
 .file-size { color: #5f6b7a; font-size: 0.9em; }
 
 .file-remove {
