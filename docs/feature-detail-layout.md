@@ -38,7 +38,7 @@ CSS:
 .stage-panel {
   display: flex;
   flex-direction: column;
-  overflow: hidden;    /* clip, скролл только внутри panel-body */
+  overflow: hidden;
   padding: 0;
 }
 .panel-header {
@@ -60,8 +60,8 @@ CSS:
 |-----------|-------------|------------|
 | RequirementsStage | Два panel-header (Источник + Требования) | Источник и таблица отдельно |
 | TestPlanStage | `<h3>Тест план</h3>` | markdown-контент |
-| TestCasesStage | `<h3>Тест-кейсы (N)</h3>` | таблица кейсов |
-| CoverageStage | `<h3>Покрытие</h3>` | матрица, отчёт, gaps |
+| TestCasesStage | `<h3>Тест-кейсы (N)</h3>` + фильтры (статус, тип, REQ) | список кейсов |
+| CoverageStage | `<h3>Покрытие</h3>` | coverage-gaps, таблица покрытия |
 | ReviewStage | `<h3>` + `.stats-grid` | отчёт, вопросы |
 | DryRunStage | `<h3>Dry Run</h3>` | JSON |
 | PublishedStage | `<h3>Публикация</h3>` | статус, действия |
@@ -70,39 +70,65 @@ CSS:
 
 `.stage-panel` **не** имеет `overflow-y: auto` на уровне родителя — скролл управляется внутри каждого компонента через `.panel-body`.
 
-## История исправлений
+---
 
-### Исправление горизонтального скролла (первоначальное)
+## CoverageStage
 
-**Проблема**: окно feature-detail имело горизонтальный скролл, контент уходил под сайдбар.
+### Таблица покрытия
 
-**Причины**: `#app` без `width: 100%`, `transform: scale(1.1)` на PipelineBar, отсутствие `overflow-x: hidden`.
+Вместо markdown-матрицы от LLM используется кастомная Vue-таблица с разделением тест-кейсов по типу:
 
-**Решение**: цепочка flex layout, `overflow: hidden` на `.main-content` и `.feature-detail`, `min-width: 0` на контейнерах.
+| Требование | Статус | Позитивные | Негативные | Остальные |
+|------------|--------|------------|------------|-----------|
 
-### Stage-компоненты (все)
+- **Позитивные** — `#2da160`, только `type === 'positive'`
+- **Негативные** — `#c62828`, только `type === 'negative'`
+- **Остальные** — `#7b1fa2`, все остальные типы (validation, boundary, permission, integration, regression, smoke, other)
 
-- `.stage-panel` → `display: flex`, `flex-direction: column`, `min-height: 0`, `overflow: hidden`, `width: 100%`
-- `.empty` → `flex: 1`, центрирование через flex
+Маппинг TC ID → тип выполняется через проп `testcasesArtifact` (передаётся из `FeatureDetailView`). Markdown-матрица (`coverage_matrix_markdown`) больше не отображается.
 
-### `RequirementsStage.vue`
+### Coverage Gaps
 
-- `.split-container` → `width: 100%`, `max-width: 100%`, `overflow-x: hidden`
-- `.split-panel` → `min-height: 0`
-- `ResizeObserver` на контейнере — пересчитывает `leftWidth`/`rightWidth` при изменении ширины
+Блок `coverage-gaps` — первый элемент в `panel-body` (перед таблицей):
 
-### `TestCasesStage.vue`
+```
+┌─────────────────────────────────────────────┐
+│  Пробелы в покрытии                          │
+│  • REQ-016: нет проверки...                  │
+│                              [🔧 Дополнить]  │  ← кнопка в правом нижнем углу
+└─────────────────────────────────────────────┘
+```
 
-- `.cases-table` → `flex: 1`, `min-width: 0`, `min-height: 0`, `overflow-x: auto`
+- `display: flex; flex-direction: column`
+- Кнопка `align-self: flex-end` в правом нижнем углу
+- `margin-bottom: 16px` для отступа от таблицы
 
-### `TestPlanStage.vue`
+---
 
-- `.markdown-rendered` → `width: 100%`
+## TestCasesStage — Фильтры
 
-### `CoverageStage.vue`
+В `panel-header` левой панели добавлены три фильтра в одной строке справа от заголовка:
 
-- `.coverage-matrix`, `.coverage-report` → `width: 100%`
-- `.table-wrapper` → `width: 100%`, `overflow-x: auto`
+```
+┌──────────────────────────────────────────────────────────┐
+│ Тест-кейсы (12)  [Все статусы▾] [Все типы▾] [Все треб...│
+├──────────────────────────────────────────────────────────┤
+```
+
+- `.panel-header` — `display: flex; align-items: center`, заголовок `flex-shrink: 0`
+- `.filter-row` — `flex: 1; justify-content: flex-end`
+- Каждый `.filter-select` — `max-width: 130px`, `font-size: 0.75em`
+
+**Фильтры:**
+1. **Статус** — `draft`, `reviewed`, `approved`, `needs_clarification`
+2. **Тип** — все 9 типов
+3. **REQ** — выпадающий список из `requirementsArtifact?.content?.requirements`
+
+Состояние фильтров сохраняется при переключении этапов через `composables/useTestCasesFilters.ts` (module-level refs, сбрасываются только при обновлении страницы).
+
+`filteredCases` — computed с AND-логикой. `selectByFiltered(id)` маппит ID на индекс в оригинальном массиве `cases`.
+
+---
 
 ## Pipeline Error в Stage-компонентах
 
@@ -126,6 +152,37 @@ CSS:
 | DryRunStage | Dry run не выполнялся | `pipeline-error` |
 
 `.pipeline-error` ранее отображался в `.pipeline-section` (над stage компонентами) — удалён оттуда.
+
+---
+
+## Stage-компоненты (все)
+
+- `.stage-panel` → `display: flex`, `flex-direction: column`, `min-height: 0`, `overflow: hidden`, `width: 100%`
+- `.empty` → `flex: 1`, центрирование через flex
+- `.pipeline-error` → `flex: 1`, центрирование, `color: #dd2b0e`
+
+### `RequirementsStage.vue`
+
+- `.split-container` → `width: 100%`, `max-width: 100%`, `overflow-x: hidden`
+- `.split-panel` → `min-height: 0`
+- `ResizeObserver` на контейнере — пересчитывает `leftWidth`/`rightWidth` при изменении ширины
+
+### `TestCasesStage.vue`
+
+- `.cases-table` → `flex: 1`, `min-width: 0`, `min-height: 0`, `overflow-x: auto`
+- Фильтры в `.panel-header`: статус, тип, REQ (из `requirementsArtifact`)
+- `useTestCasesFilters` — singleton-состояние фильтров
+
+### `TestPlanStage.vue`
+
+- `.markdown-rendered` → `width: 100%`
+
+### `CoverageStage.vue`
+
+- Таблица с колонками: Требование, Статус, Позитивные, Негативные, Остальные
+- `testcasesArtifact` — проп для маппинга TC ID → тип
+- `coverage-gaps` — первый элемент `panel-body`, кнопка в правом нижнем углу
+- Markdown-матрица не отображается
 
 ### `DryRunStage.vue`
 

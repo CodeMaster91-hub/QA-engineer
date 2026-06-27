@@ -119,6 +119,7 @@
           :coverageGaps="pipeline?.coverageGaps"
           :filling="fillingGaps"
           :error="pipeline?.error"
+          :testcases-artifact="getArtifact('testcases')"
           @fill-gaps="onFillGaps"
         />
         <ReviewStage
