@@ -167,7 +167,13 @@ ${JSON.stringify(existingRequirements, null, 2)}
 Верни только JSON без markdown-обёртки:
 {
   "requirements": [...],
-  "open_questions": [...]
+  "open_questions": [
+    {
+      "question": "Текст вопроса",
+      "reason": "Причина вопроса",
+      "severity": "high|medium|low"
+    }
+  ]
 }`
       : `Ты агент Requirements Analyst.
 Извлеки ВСЕ требования из предоставленного текста.
@@ -209,7 +215,13 @@ ${JSON.stringify(existingRequirements, null, 2)}
       "type": "functional"
     }
   ],
-  "open_questions": []
+  "open_questions": [
+    {
+      "question": "Текст вопроса",
+      "reason": "Причина вопроса",
+      "severity": "high|medium|low"
+    }
+  ]
 }`;
 
     const userContent = hasExisting
@@ -265,8 +277,8 @@ ${JSON.stringify(existingRequirements, null, 2)}
         status: 'blocked',
         output: { requirements },
         questions: openQuestions.map((q: any) => ({
-          question: q.question || '',
-          reason: q.reason || '',
+          question: q.question || q.text || q.title || '',
+          reason: q.reason || q.description || q.detail || '',
           severity: q.severity || 'medium',
         })),
         timestamp: new Date(),
