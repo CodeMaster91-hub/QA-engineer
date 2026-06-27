@@ -3,15 +3,40 @@
     <!-- Left panel: Cases list -->
     <div class="split-panel cases-panel" :style="{ width: leftWidth + 'px' }">
       <div class="panel-header">
-        <h3>Тест-кейсы ({{ cases.length }})</h3>
+        <h3 class="panel-title">Тест-кейсы ({{ filteredCases.length }})</h3>
+        <div class="filter-row">
+          <select v-model="statusFilter" class="filter-select">
+            <option value="">Все статусы</option>
+            <option value="draft">Черновик</option>
+            <option value="reviewed">На ревью</option>
+            <option value="approved">Одобрен</option>
+            <option value="needs_clarification">Требует уточнения</option>
+          </select>
+          <select v-model="typeFilter" class="filter-select">
+            <option value="">Все типы</option>
+            <option value="positive">Позитивный</option>
+            <option value="negative">Негативный</option>
+            <option value="validation">Валидация</option>
+            <option value="boundary">Граничный</option>
+            <option value="permission">Права доступа</option>
+            <option value="integration">Интеграционный</option>
+            <option value="regression">Регрессия</option>
+            <option value="smoke">Дымовой</option>
+            <option value="other">Другой</option>
+          </select>
+          <select v-model="reqFilter" class="filter-select">
+            <option value="">Все требования</option>
+            <option v-for="req in reqOptions" :key="req" :value="req">{{ req }}</option>
+          </select>
+        </div>
       </div>
       <div class="panel-body">
-        <div v-if="cases.length" class="cases-scroll">
+        <div v-if="filteredCases.length" class="cases-scroll">
           <div
-            v-for="(tc, idx) in cases"
+            v-for="tc in filteredCases"
             :key="tc.id"
-            :class="['case-row', { selected: selectedIndex === idx }]"
-            @click="selectCase(idx)"
+            :class="['case-row', { selected: selectedIndex === findRealIndex(tc.id) }]"
+            @click="selectByFiltered(tc.id)"
           >
             <span class="tc-id">{{ tc.id }}</span>
             <span class="tc-title">{{ tc.title }}</span>
@@ -253,7 +278,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import type { Artifact } from '@/api/types';
 import { useTestCases } from '@/composables/useTestCases';
 
@@ -261,6 +286,7 @@ const props = defineProps<{
   artifact: Artifact | null;
   slug: string;
   error?: string;
+  requirementsArtifact?: Artifact | null;
 }>();
 
 const emit = defineEmits<{
@@ -290,6 +316,34 @@ const {
   deleteCase,
   save,
 } = useTestCases(props.artifact);
+
+const statusFilter = ref('')
+const typeFilter = ref('')
+const reqFilter = ref('')
+
+const reqOptions = computed(() => {
+  const reqs = props.requirementsArtifact?.content?.requirements
+  if (!reqs?.length) return []
+  return reqs.map((r: any) => r.id).filter(Boolean)
+})
+
+const filteredCases = computed(() => {
+  return cases.value.filter((tc) => {
+    if (statusFilter.value && tc.status !== statusFilter.value) return false
+    if (typeFilter.value && tc.type !== typeFilter.value) return false
+    if (reqFilter.value && !tc.requirement_ids?.includes(reqFilter.value)) return false
+    return true
+  })
+})
+
+function findRealIndex(id: string) {
+  return cases.value.findIndex(c => c.id === id)
+}
+
+function selectByFiltered(id: string) {
+  const realIdx = findRealIndex(id)
+  if (realIdx !== -1) selectCase(realIdx)
+}
 
 watch(
   () => props.artifact,
@@ -399,15 +453,44 @@ onUnmounted(() => {
 }
 
 .panel-header {
-  padding: 13px 20px 10px;
+  padding: 8px 16px;
   border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title {
+  margin: 0;
+  color: #1a1a2e;
+  font-size: 0.95em;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
-.panel-header h3 {
-  margin: 0;
-  color: #1a1a2e;
-  font-size: 1.1em;
+.filter-row {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.filter-select {
+  max-width: 130px;
+  min-width: 0;
+  padding: 2px 6px;
+  font-size: 0.75em;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #1a73e8;
 }
 
 .panel-body {

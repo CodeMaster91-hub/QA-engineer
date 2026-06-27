@@ -111,6 +111,7 @@
           :artifact="getArtifact('testcases')"
           :slug="featureSlug"
           :error="pipeline?.error"
+          :requirements-artifact="getArtifact('requirements')"
         />
         <CoverageStage
           v-else-if="selectedStage === 'coverage_audited'"

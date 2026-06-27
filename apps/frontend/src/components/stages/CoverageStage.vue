@@ -4,6 +4,22 @@
       <h3>Покрытие</h3>
     </div>
     <div class="panel-body">
+      <div v-if="coverageGaps?.length" class="coverage-gaps">
+        <div class="gaps-header">
+          <h4>Пробелы в покрытии</h4>
+          <button
+            class="btn-fill-gaps"
+            @click="$emit('fill-gaps')"
+            :disabled="filling"
+          >
+            {{ filling ? 'Генерация...' : '🔧 Дополнить тест-кейсы' }}
+          </button>
+        </div>
+        <ul>
+          <li v-for="(gap, idx) in coverageGaps" :key="idx">{{ gap }}</li>
+        </ul>
+      </div>
+
       <div v-if="coverageMatrix" class="coverage-matrix">
         <div class="markdown-rendered" v-html="renderedMatrix"></div>
       </div>
@@ -33,22 +49,6 @@
 
       <div v-else-if="error" class="pipeline-error">{{ error }}</div>
       <div v-else class="empty">Нет данных покрытия</div>
-
-      <div v-if="coverageGaps?.length" class="coverage-gaps">
-        <div class="gaps-header">
-          <h4>Пробелы в покрытии</h4>
-          <button
-            class="btn-fill-gaps"
-            @click="$emit('fill-gaps')"
-            :disabled="filling"
-          >
-            {{ filling ? 'Генерация...' : '🔧 Дополнить тест-кейсы' }}
-          </button>
-        </div>
-        <ul>
-          <li v-for="(gap, idx) in coverageGaps" :key="idx">{{ gap }}</li>
-        </ul>
-      </div>
     </div>
   </div>
 </template>
