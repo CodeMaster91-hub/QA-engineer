@@ -1,10 +1,9 @@
 <template>
   <div class="stage-panel">
-    <h3>Сводный отчёт</h3>
+    <div class="panel-header">
+      <h3>Сводный отчёт</h3>
 
-    <div v-if="hasData" class="report">
-      <!-- Statistics -->
-      <div class="stats-grid">
+      <div v-if="hasData" class="stats-grid">
         <div class="stat-card">
           <div class="stat-value">{{ requirementsCount }}</div>
           <div class="stat-label">Требований</div>
@@ -22,83 +21,87 @@
           <div class="stat-label">Качество</div>
         </div>
       </div>
+    </div>
 
-      <!-- Requirements Coverage -->
-      <div class="report-section" v-if="coverageReport.length">
-        <h4>Требования</h4>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Статус</th>
-                <th>Кейсы</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="req in coverageReport" :key="req.requirement_id">
-                <td class="req-id">{{ req.requirement_id }}</td>
-                <td>
-                  <span :class="['badge', statusClass(req.status)]">
-                    {{ statusIcon(req.status) }} {{ req.status }}
-                  </span>
-                </td>
-                <td class="tc-list">{{ formatCases(req.covered_by) }}</td>
-              </tr>
-            </tbody>
-          </table>
+    <div class="panel-body">
+      <div v-if="hasData" class="report">
+        <!-- Requirements Coverage -->
+        <div class="report-section" v-if="coverageReport.length">
+          <h4>Требования</h4>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Статус</th>
+                  <th>Кейсы</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="req in coverageReport" :key="req.requirement_id">
+                  <td class="req-id">{{ req.requirement_id }}</td>
+                  <td>
+                    <span :class="['badge', statusClass(req.status)]">
+                      {{ statusIcon(req.status) }} {{ req.status }}
+                    </span>
+                  </td>
+                  <td class="tc-list">{{ formatCases(req.covered_by) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <!-- Strengths -->
-      <div class="report-section" v-if="reviewStrengths?.length">
-        <h4 class="section-strengths">Сильные стороны</h4>
-        <ul>
-          <li v-for="(s, i) in reviewStrengths" :key="i">{{ s }}</li>
-        </ul>
-      </div>
+        <!-- Strengths -->
+        <div class="report-section" v-if="reviewStrengths?.length">
+          <h4 class="section-strengths">Сильные стороны</h4>
+          <ul>
+            <li v-for="(s, i) in reviewStrengths" :key="i">{{ s }}</li>
+          </ul>
+        </div>
 
-      <!-- Weaknesses -->
-      <div class="report-section" v-if="reviewWeaknesses?.length">
-        <h4 class="section-weaknesses">Замечания</h4>
-        <ul>
-          <li v-for="(w, i) in reviewWeaknesses" :key="i">{{ w }}</li>
-        </ul>
-      </div>
+        <!-- Weaknesses -->
+        <div class="report-section" v-if="reviewWeaknesses?.length">
+          <h4 class="section-weaknesses">Замечания</h4>
+          <ul>
+            <li v-for="(w, i) in reviewWeaknesses" :key="i">{{ w }}</li>
+          </ul>
+        </div>
 
-      <!-- Recommendations -->
-      <div class="report-section" v-if="reviewRecommendations?.length">
-        <h4 class="section-recommendations">Рекомендации</h4>
-        <ul>
-          <li v-for="(r, i) in reviewRecommendations" :key="i">{{ r }}</li>
-        </ul>
-      </div>
+        <!-- Recommendations -->
+        <div class="report-section" v-if="reviewRecommendations?.length">
+          <h4 class="section-recommendations">Рекомендации</h4>
+          <ul>
+            <li v-for="(r, i) in reviewRecommendations" :key="i">{{ r }}</li>
+          </ul>
+        </div>
 
-      <!-- Summary -->
-      <div class="report-section" v-if="reviewSummary">
-        <h4>Резюме</h4>
-        <p class="summary-text">{{ reviewSummary }}</p>
-      </div>
+        <!-- Summary -->
+        <div class="report-section" v-if="reviewSummary">
+          <h4>Резюме</h4>
+          <p class="summary-text">{{ reviewSummary }}</p>
+        </div>
 
-      <!-- Questions -->
-      <div class="report-section" v-if="pipelineQuestions?.length">
-        <h4 class="section-questions">Вопросы</h4>
-        <div class="questions-list">
-          <div v-for="(q, i) in pipelineQuestions" :key="i" class="question-card">
-            <div class="question-header">
-              <span class="question-severity" :class="severityClass(q.severity)">
-                {{ severityLabel(q.severity) }}
-              </span>
-              <span class="question-stage">{{ q.stage }}</span>
+        <!-- Questions -->
+        <div class="report-section" v-if="pipelineQuestions?.length">
+          <h4 class="section-questions">Вопросы</h4>
+          <div class="questions-list">
+            <div v-for="(q, i) in pipelineQuestions" :key="i" class="question-card">
+              <div class="question-header">
+                <span class="question-severity" :class="severityClass(q.severity)">
+                  {{ severityLabel(q.severity) }}
+                </span>
+                <span class="question-stage">{{ q.stage }}</span>
+              </div>
+              <p class="question-text">{{ q.question }}</p>
+              <p class="question-reason" v-if="q.reason">{{ q.reason }}</p>
             </div>
-            <p class="question-text">{{ q.question }}</p>
-            <p class="question-reason" v-if="q.reason">{{ q.reason }}</p>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-else class="empty">Нет данных</div>
+      <div v-else class="empty">Нет данных</div>
+    </div>
   </div>
 </template>
 
@@ -194,25 +197,37 @@ const severityLabel = (severity: string) => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
-.stage-panel h3 {
-  margin: 0 0 16px 0;
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  margin: 0 0 12px 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
 }
 
 .stat-card {

@@ -1,8 +1,12 @@
 <template>
   <div class="stage-panel">
-    <h3>Тест план</h3>
-    <div v-if="testPlanMarkdown" class="markdown-rendered" v-html="renderedTestPlan"></div>
-    <div v-else class="empty">Тест план не сформирован</div>
+    <div class="panel-header">
+      <h3>Тест план</h3>
+    </div>
+    <div class="panel-body">
+      <div v-if="testPlanMarkdown" class="markdown-rendered" v-html="renderedTestPlan"></div>
+      <div v-else class="empty">Тест план не сформирован</div>
+    </div>
   </div>
 </template>
 
@@ -24,18 +28,31 @@ const renderedTestPlan = computed(() => renderMarkdown(testPlanMarkdown.value))
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
-.stage-panel h3 {
-  margin: 0 0 16px 0;
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  margin: 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .markdown-rendered {

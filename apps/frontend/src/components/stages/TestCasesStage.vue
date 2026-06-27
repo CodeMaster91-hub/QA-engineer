@@ -1,29 +1,33 @@
 <template>
   <div class="stage-panel">
-    <h3>Тест-кейсы ({{ cases.length }})</h3>
-    <div v-if="cases.length" class="cases-table">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Steps</th>
-            <th>Status</th>
-            <th>Requirements</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="tc in cases" :key="tc.id">
-            <td class="tc-id">{{ tc.id }}</td>
-            <td>{{ tc.title }}</td>
-            <td>{{ tc.steps?.length || 0 }}</td>
-            <td><span :class="['badge', `badge-${tc.status}`]">{{ tc.status }}</span></td>
-            <td class="req-ids">{{ (tc.requirement_ids || []).join(', ') }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="panel-header">
+      <h3>Тест-кейсы ({{ cases.length }})</h3>
     </div>
-    <div v-else class="empty">Нет тест-кейсов</div>
+    <div class="panel-body">
+      <div v-if="cases.length" class="cases-table">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Steps</th>
+              <th>Status</th>
+              <th>Requirements</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="tc in cases" :key="tc.id">
+              <td class="tc-id">{{ tc.id }}</td>
+              <td>{{ tc.title }}</td>
+              <td>{{ tc.steps?.length || 0 }}</td>
+              <td><span :class="['badge', `badge-${tc.status}`]">{{ tc.status }}</span></td>
+              <td class="req-ids">{{ (tc.requirement_ids || []).join(', ') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="empty">Нет тест-кейсов</div>
+    </div>
   </div>
 </template>
 
@@ -46,18 +50,31 @@ const cases = computed(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
-.stage-panel h3 {
-  margin: 0 0 16px 0;
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  margin: 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .cases-table {

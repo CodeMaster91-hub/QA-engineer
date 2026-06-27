@@ -1,50 +1,53 @@
 <template>
   <div class="stage-panel">
-    <h3>Покрытие</h3>
-
-    <div v-if="coverageMatrix" class="coverage-matrix">
-      <div class="markdown-rendered" v-html="renderedMatrix"></div>
+    <div class="panel-header">
+      <h3>Покрытие</h3>
     </div>
-
-    <div v-else-if="coverageReport.length" class="coverage-report">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Requirement</th>
-              <th>Status</th>
-              <th>Covered By</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="req in coverageReport" :key="req.requirement_id">
-              <td class="req-id">{{ req.requirement_id }}</td>
-              <td><span :class="['badge', statusClass(req.status)]">{{ req.status }}</span></td>
-              <td>{{ (req.covered_by || []).join(', ') || '-' }}</td>
-              <td>{{ req.notes || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="panel-body">
+      <div v-if="coverageMatrix" class="coverage-matrix">
+        <div class="markdown-rendered" v-html="renderedMatrix"></div>
       </div>
-    </div>
 
-    <div v-else class="empty">Нет данных покрытия</div>
-
-    <div v-if="coverageGaps?.length" class="coverage-gaps">
-      <div class="gaps-header">
-        <h4>Пробелы в покрытии</h4>
-        <button
-          class="btn-fill-gaps"
-          @click="$emit('fill-gaps')"
-          :disabled="filling"
-        >
-          {{ filling ? 'Генерация...' : '🔧 Дополнить тест-кейсы' }}
-        </button>
+      <div v-else-if="coverageReport.length" class="coverage-report">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Requirement</th>
+                <th>Status</th>
+                <th>Covered By</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="req in coverageReport" :key="req.requirement_id">
+                <td class="req-id">{{ req.requirement_id }}</td>
+                <td><span :class="['badge', statusClass(req.status)]">{{ req.status }}</span></td>
+                <td>{{ (req.covered_by || []).join(', ') || '-' }}</td>
+                <td>{{ req.notes || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <ul>
-        <li v-for="(gap, idx) in coverageGaps" :key="idx">{{ gap }}</li>
-      </ul>
+
+      <div v-else class="empty">Нет данных покрытия</div>
+
+      <div v-if="coverageGaps?.length" class="coverage-gaps">
+        <div class="gaps-header">
+          <h4>Пробелы в покрытии</h4>
+          <button
+            class="btn-fill-gaps"
+            @click="$emit('fill-gaps')"
+            :disabled="filling"
+          >
+            {{ filling ? 'Генерация...' : '🔧 Дополнить тест-кейсы' }}
+          </button>
+        </div>
+        <ul>
+          <li v-for="(gap, idx) in coverageGaps" :key="idx">{{ gap }}</li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -86,18 +89,31 @@ const statusClass = (status: string) => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
-.stage-panel h3 {
-  margin: 0 0 16px 0;
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  margin: 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 table {

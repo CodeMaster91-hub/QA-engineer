@@ -753,7 +753,11 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-.stage-content :deep(.stage-panel),
+.stage-content :deep(.stage-panel) {
+  flex: 1;
+  width: 100%;
+}
+
 .stage-content :deep(.split-container) {
   flex: 1;
   width: 100%;

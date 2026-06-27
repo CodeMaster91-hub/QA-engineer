@@ -1,11 +1,14 @@
 <template>
   <div class="stage-panel">
-    <h3>Dry Run</h3>
-
-    <div v-if="dryRunContent" class="dryrun-content">
-      <pre class="json-view">{{ formatJson(dryRunContent) }}</pre>
+    <div class="panel-header">
+      <h3>Dry Run</h3>
     </div>
-    <div v-else class="empty">Dry run не выполнялся</div>
+    <div class="panel-body">
+      <div v-if="dryRunContent" class="dryrun-content">
+        <pre class="json-view">{{ formatJson(dryRunContent) }}</pre>
+      </div>
+      <div v-else class="empty">Dry run не выполнялся</div>
+    </div>
   </div>
 </template>
 
@@ -33,18 +36,31 @@ const formatJson = (obj: any) => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
-.stage-panel h3 {
-  margin: 0 0 16px 0;
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  margin: 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .dryrun-content {

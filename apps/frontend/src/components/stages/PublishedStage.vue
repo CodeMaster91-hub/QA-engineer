@@ -1,19 +1,22 @@
 <template>
   <div class="stage-panel">
-    <h3>Публикация</h3>
-
-    <div class="publish-status">
-      <div class="status-icon">✓</div>
-      <div class="status-text">
-        <p>Pipeline завершён успешно.</p>
-        <p class="status-hint">Кейсы готовы к публикации в TestRail.</p>
-      </div>
+    <div class="panel-header">
+      <h3>Публикация</h3>
     </div>
+    <div class="panel-body">
+      <div class="publish-status">
+        <div class="status-icon">✓</div>
+        <div class="status-text">
+          <p>Pipeline завершён успешно.</p>
+          <p class="status-hint">Кейсы готовы к публикации в TestRail.</p>
+        </div>
+      </div>
 
-    <div v-if="showPublish" class="publish-actions">
-      <button class="btn btn-publish" @click="$emit('publish')">
-        📤 Опубликовать в TestRail
-      </button>
+      <div v-if="showPublish" class="publish-actions">
+        <button class="btn btn-publish" @click="$emit('publish')">
+          📤 Опубликовать в TestRail
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -33,18 +36,31 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
-.stage-panel h3 {
-  margin: 0 0 16px 0;
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  margin: 0;
   color: #1a1a2e;
   font-size: 1.1em;
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .publish-status {
