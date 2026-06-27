@@ -1064,11 +1064,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  color: #000;
 }
 
 .file-icon { font-size: 24px; }
-.file-hint { font-size: 0.85em; color: #000; }
+.file-hint { font-size: 0.85em; color: #5f6b7a; }
 
 .file-info {
   display: flex;
