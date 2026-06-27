@@ -31,6 +31,7 @@
         </div>
       </div>
 
+      <div v-else-if="error" class="pipeline-error">{{ error }}</div>
       <div v-else class="empty">Нет данных покрытия</div>
 
       <div v-if="coverageGaps?.length" class="coverage-gaps">
@@ -61,6 +62,7 @@ const props = defineProps<{
   artifact: Artifact | null
   coverageGaps?: string[] | null
   filling?: boolean
+  error?: string
 }>()
 
 defineEmits<{
@@ -200,6 +202,17 @@ th {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.pipeline-error {
+  flex: 1;
+  min-height: 0;
+  color: #dd2b0e;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
 }
 
 .gaps-header {

@@ -13,10 +13,7 @@
         @mouseenter="hoveredStage = stageObj.key"
         @mouseleave="hoveredStage = null"
       >
-        <svg v-if="stageObj.status === 'running'" class="stage-icon queued-spin" viewBox="0 0 16 16" width="16" height="16">
-          <circle cx="8" cy="8" r="7" fill="currentColor"/>
-          <path d="M8 8 L8 1 A7 7 0 0 0 1.94 11.5 Z" fill="white"/>
-        </svg>
+        <div v-if="stageObj.status === 'running'" class="stage-icon radar-spin"></div>
 
         <svg v-else-if="stageObj.status === 'paused'" class="stage-icon" viewBox="0 0 16 16" width="16" height="16">
           <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -219,29 +216,25 @@ const connectorClass = (status: string) => {
 .connector-failed { background: #dd2b0e; }
 .connector-blocked { background: #f59e0b; }
 
-.queued-spin {
-  --queued-color: currentColor;
-  --queued-trail: currentColor;
-  animation: queued-rotate 2.5s linear infinite;
-  filter: drop-shadow(0 0 2px var(--queued-trail));
+.radar-spin {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--radar-color, #1068bf) 0deg,
+    var(--radar-color, #1068bf) 3deg,
+    transparent 4deg,
+    transparent 80deg,
+    var(--radar-faint, rgba(16, 104, 191, 0.15)) 120deg,
+    var(--radar-mid, rgba(16, 104, 191, 0.4)) 240deg,
+    var(--radar-color, #1068bf) 357deg,
+    var(--radar-color, #1068bf) 360deg
+  );
+  animation: radar-rotate 2.5s linear infinite;
 }
 
-.theme-blue .queued-spin {
-  --queued-color: #1068bf;
-  --queued-trail: rgba(16, 104, 191, 0.4);
-}
-
-.theme-violet .queued-spin {
-  --queued-color: #8b5cf6;
-  --queued-trail: rgba(139, 92, 246, 0.4);
-}
-
-.theme-emerald .queued-spin {
-  --queued-color: #10b981;
-  --queued-trail: rgba(16, 185, 129, 0.4);
-}
-
-@keyframes queued-rotate {
+@keyframes radar-rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }

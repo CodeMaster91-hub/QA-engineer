@@ -13,6 +13,9 @@
       → stage-компонент (flex: 1, width: 100%, overflow: hidden)
         → .panel-header (flex-shrink: 0, border-bottom)
         → .panel-body (flex: 1, overflow-y: auto)
+          → [data exists] ... контент
+          → [error] .pipeline-error
+          → [else] .empty
 ```
 
 ### Sticky Panel Header (все stage-компоненты)
@@ -100,6 +103,29 @@ CSS:
 
 - `.coverage-matrix`, `.coverage-report` → `width: 100%`
 - `.table-wrapper` → `width: 100%`, `overflow-x: auto`
+
+## Pipeline Error в Stage-компонентах
+
+`pipeline.error` отображается внутри `panel-body` stage-компонента вместо стандартного текста-заглушки.
+
+**Механизм:**
+1. `FeatureDetailView.vue` передаёт `:error="pipeline.error"` во все stage-компоненты
+2. В каждом компоненте проверка: `v-if="error"` → отображается `.pipeline-error` (красный текст)
+3. Если данных нет и ошибки нет → показывается стандартная заглушка (`.empty`)
+4. Если данные есть → они отображаются, ошибка игнорируется
+
+**Затронутые компоненты:**
+| Компонент | Заглушка (empty) | Замена при ошибке |
+|-----------|-----------------|-------------------|
+| RequirementsStage (левая панель) | Нет данных источника | `pipeline-error` |
+| RequirementsStage (правая панель) | Нет требований | `pipeline-error` |
+| TestPlanStage | Тест план не сформирован | `pipeline-error` |
+| TestCasesStage | Нет тест-кейсов | `pipeline-error` |
+| CoverageStage | Нет данных покрытия | `pipeline-error` |
+| ReviewStage | Нет данных | `pipeline-error` |
+| DryRunStage | Dry run не выполнялся | `pipeline-error` |
+
+`.pipeline-error` ранее отображался в `.pipeline-section` (над stage компонентами) — удалён оттуда.
 
 ### `DryRunStage.vue`
 

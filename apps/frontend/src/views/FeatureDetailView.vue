@@ -82,9 +82,7 @@
           </div>
         </div>
 
-        <div class="pipeline-info">
-          <span v-if="pipeline.error" class="pipeline-error">{{ pipeline.error }}</span>
-        </div>
+        
       </div>
 
       <!-- Stage Content -->
@@ -100,22 +98,26 @@
           :artifact="getArtifact('requirements')"
           :questions="pipeline?.questions || []"
           :is-processing="isStageProcessing('requirements_extracted') && !getArtifact('requirements')"
+          :error="pipeline?.error"
           @answer="onAnswerQuestions"
         />
         <TestPlanStage
           v-else-if="selectedStage === 'test_plan'"
           :artifact="getArtifact('testplan')"
+          :error="pipeline?.error"
         />
         <TestCasesStage
           v-else-if="selectedStage === 'test_cases'"
           :artifact="getArtifact('testcases')"
           :slug="featureSlug"
+          :error="pipeline?.error"
         />
         <CoverageStage
           v-else-if="selectedStage === 'coverage_audited'"
           :artifact="getArtifact('coverage')"
           :coverageGaps="pipeline?.coverageGaps"
           :filling="fillingGaps"
+          :error="pipeline?.error"
           @fill-gaps="onFillGaps"
         />
         <ReviewStage
@@ -125,10 +127,12 @@
           :testcasesArtifact="getArtifact('testcases')"
           :coverageArtifact="getArtifact('coverage')"
           :pipelineQuestions="pipeline?.questions"
+          :error="pipeline?.error"
         />
         <DryRunStage
           v-else-if="selectedStage === 'dry_run_completed'"
           :artifact="getArtifact('dry_run')"
+          :error="pipeline?.error"
         />
         <PublishedStage
           v-else-if="selectedStage === 'published'"
@@ -655,18 +659,6 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.pipeline-info {
-  margin-top: 7px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.pipeline-error {
-  color: #dd2b0e;
-  font-size: 0.9em;
 }
 
 .controls {

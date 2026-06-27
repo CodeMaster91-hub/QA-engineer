@@ -100,6 +100,7 @@
         </div>
       </div>
 
+      <div v-else-if="error" class="pipeline-error">{{ error }}</div>
       <div v-else class="empty">Нет данных</div>
     </div>
   </div>
@@ -120,6 +121,7 @@ const props = defineProps<{
     severity: string
     stage: string
   }> | null
+  error?: string
 }>()
 
 const hasData = computed(() => {
@@ -392,6 +394,17 @@ th {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.pipeline-error {
+  flex: 1;
+  min-height: 0;
+  color: #dd2b0e;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
 }
 
 .table-wrapper {

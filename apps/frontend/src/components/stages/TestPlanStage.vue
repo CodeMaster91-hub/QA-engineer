@@ -5,6 +5,7 @@
     </div>
     <div class="panel-body">
       <div v-if="testPlanMarkdown" class="markdown-rendered" v-html="renderedTestPlan"></div>
+      <div v-else-if="error" class="pipeline-error">{{ error }}</div>
       <div v-else class="empty">Тест план не сформирован</div>
     </div>
   </div>
@@ -17,6 +18,7 @@ import { renderMarkdown } from '@/utils/markdown'
 
 const props = defineProps<{
   artifact: Artifact | null
+  error?: string
 }>()
 
 const testPlanMarkdown = computed(() => props.artifact?.content?.test_plan_markdown || '')
@@ -79,5 +81,16 @@ const renderedTestPlan = computed(() => renderMarkdown(testPlanMarkdown.value))
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.pipeline-error {
+  flex: 1;
+  min-height: 0;
+  color: #dd2b0e;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
 }
 </style>

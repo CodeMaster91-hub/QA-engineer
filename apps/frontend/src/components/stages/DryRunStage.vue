@@ -109,6 +109,7 @@
         </div>
       </template>
 
+      <div v-else-if="error" class="pipeline-error">{{ error }}</div>
       <div v-else class="empty">Dry run не выполнялся</div>
     </div>
   </div>
@@ -120,6 +121,7 @@ import type { Artifact, DryRunArtifact } from '@/api/types'
 
 const props = defineProps<{
   artifact: Artifact | null
+  error?: string
 }>()
 
 const dryRunData = computed<DryRunArtifact | null>(() => {
@@ -474,5 +476,16 @@ th {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.pipeline-error {
+  flex: 1;
+  min-height: 0;
+  color: #dd2b0e;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
 }
 </style>

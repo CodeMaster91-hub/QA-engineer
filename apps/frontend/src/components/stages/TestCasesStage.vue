@@ -19,6 +19,7 @@
             <span :class="['badge', `badge-${tc.status}`]">{{ tc.status }}</span>
           </div>
         </div>
+        <div v-else-if="error" class="pipeline-error">{{ error }}</div>
         <div v-else class="empty">Нет тест-кейсов</div>
       </div>
     </div>
@@ -259,6 +260,7 @@ import { useTestCases } from '@/composables/useTestCases';
 const props = defineProps<{
   artifact: Artifact | null;
   slug: string;
+  error?: string;
 }>();
 
 const emit = defineEmits<{
@@ -760,6 +762,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   color: #999;
+}
+
+.pipeline-error {
+  flex: 1;
+  min-height: 0;
+  color: #dd2b0e;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
 }
 
 .empty-editor {
