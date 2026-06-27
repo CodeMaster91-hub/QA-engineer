@@ -87,6 +87,22 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 | review | `{ ... }` | JSON |
 | dry_run | `{ ... }` | JSON |
 
+## UI-паттерны
+
+### Sticky Panel Header
+
+Все stage-компоненты используют паттерн `panel-header` + `panel-body`:
+- `.stage-panel` → `overflow: hidden`, `padding: 0`
+- `.panel-header` → `flex-shrink: 0`, `border-bottom` — заголовок зафиксирован
+- `.panel-body` → `flex: 1`, `overflow-y: auto` — только контент скроллится
+
+Исключение: `RequirementsStage` — два side-by-side panel через `.split-container`.
+
+### UI-настройки (localStorage)
+
+Настройки интерфейса хранятся в `localStorage` (не в БД):
+- `show_logs` — показывать/скрывать секцию логов (`Settings → Интерфейс`)
+
 ## LLM и очередь
 
 - **LLMService.complete()** принимает `PipelineStage` (строку-enum) в качестве первого аргумента — НЕ объект

@@ -1,20 +1,6 @@
-# Feature-Detail Layout Fix
+# Feature-Detail Layout
 
-## Проблема
-
-Окно feature-detail имело горизонтальный скролл, контент уходил под сайдбар. Разные этапы заполняли экран по-разному: Review и TestPlan — полностью, остальные — нет. При малом контенте `.main-content` сжимался до intrinsic width.
-
-### Причины
-
-1. `#app` не имел `width: 100%` — сжимался до ширины контента
-2. `.main-content` в `App.vue` не имел `overflow-x: hidden` — горизонтальный скролл на уровне страницы
-3. `transform: scale(1.1)` на PipelineBar растягивал элемент на 110%, переполняя контейнер
-4. `.feature-detail` не имел `width: 100%` — сжимался при малом контенте
-5. Сплит-панели в `RequirementsStage` могли превышать ширину контейнера
-6. Таблицы в `CoverageStage` и `ReviewStage` не были обернуты в `overflow-x: auto`
-7. Stage-компоненты не имели единого flex-layout, контент определял ширину панели
-
-## Решение
+## Текущая архитектура layout
 
 ### Цепочка layout
 
@@ -24,33 +10,83 @@
     → .detail-header (flex-shrink: 0)
     → .pipeline-section (flex-shrink: 0)
     → .stage-content (flex: 1, flex-col, align-items: stretch)
-      → stage-компонент (flex: 1, width: 100%, overflow-y: auto)
+      → stage-компонент (flex: 1, width: 100%, overflow: hidden)
+        → .panel-header (flex-shrink: 0, border-bottom)
+        → .panel-body (flex: 1, overflow-y: auto)
 ```
 
-### `App.vue`
+### Sticky Panel Header (все stage-компоненты)
 
-- `.main-content` → `display: flex`, `overflow: hidden` (вместо `overflow-y: auto`)
-- Скролл перенесён внутрь `.feature-detail`
+Все stage-компоненты используют паттерн `panel-header` + `panel-body` для фиксации заголовка при скролле:
 
-### `FeatureDetailView.vue`
+```html
+<div class="stage-panel">
+  <div class="panel-header">
+    <h3>Title</h3>
+  </div>
+  <div class="panel-body">
+    <!-- скроллируемый контент -->
+  </div>
+</div>
+```
 
-- `.feature-detail` → `display: flex`, `flex-direction: column`, `flex: 1`, `overflow: hidden`
-- `.detail-header`, `.pipeline-section` → `flex-shrink: 0`
-- `.stage-content` → `flex: 1`, `align-items: stretch`
-- `:deep(.stage-panel), :deep(.split-container)` → `flex: 1`, `width: 100%`, `min-width: 0`, `overflow-y: auto`
-- `.pipeline-bar-wrapper` → убран `transform: scale(1.1)`, `overflow-x: auto`
-- Убран `width: 100%` у `.detail-header`, `.pipeline-section`, `.logs-section` (растягиваются как flex-дети)
+CSS:
+```css
+.stage-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;    /* clip, скролл только внутри panel-body */
+  padding: 0;
+}
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+```
+
+### Особенности по компонентам
+
+| Компонент | Sticky зона | Скроллится |
+|-----------|-------------|------------|
+| RequirementsStage | Два panel-header (Источник + Требования) | Источник и таблица отдельно |
+| TestPlanStage | `<h3>Тест план</h3>` | markdown-контент |
+| TestCasesStage | `<h3>Тест-кейсы (N)</h3>` | таблица кейсов |
+| CoverageStage | `<h3>Покрытие</h3>` | матрица, отчёт, gaps |
+| ReviewStage | `<h3>` + `.stats-grid` | отчёт, вопросы |
+| DryRunStage | `<h3>Dry Run</h3>` | JSON |
+| PublishedStage | `<h3>Публикация</h3>` | статус, действия |
+
+### FeatureDetailView — родительский CSS
+
+`.stage-panel` **не** имеет `overflow-y: auto` на уровне родителя — скролл управляется внутри каждого компонента через `.panel-body`.
+
+## История исправлений
+
+### Исправление горизонтального скролла (первоначальное)
+
+**Проблема**: окно feature-detail имело горизонтальный скролл, контент уходил под сайдбар.
+
+**Причины**: `#app` без `width: 100%`, `transform: scale(1.1)` на PipelineBar, отсутствие `overflow-x: hidden`.
+
+**Решение**: цепочка flex layout, `overflow: hidden` на `.main-content` и `.feature-detail`, `min-width: 0` на контейнерах.
 
 ### Stage-компоненты (все)
 
-- `.stage-panel` → `display: flex`, `flex-direction: column`, `min-height: 0`, `overflow-y: auto`, `width: 100%`
+- `.stage-panel` → `display: flex`, `flex-direction: column`, `min-height: 0`, `overflow: hidden`, `width: 100%`
 - `.empty` → `flex: 1`, центрирование через flex
 
 ### `RequirementsStage.vue`
 
 - `.split-container` → `width: 100%`, `max-width: 100%`, `overflow-x: hidden`
 - `.split-panel` → `min-height: 0`
-- `ResizeObserver` на контейнере — пересчитывает `leftWidth`/`rightWidth` при изменении ширины (сворачивание сайдбара, ресайз окна), сохраняя пропорцию панелей
+- `ResizeObserver` на контейнере — пересчитывает `leftWidth`/`rightWidth` при изменении ширины
 
 ### `TestCasesStage.vue`
 
@@ -77,15 +113,15 @@
 
 ### `ReviewStage.vue`
 
+- `stats-grid` в `.panel-header` (sticky вместе с заголовком)
 - `.report-section:last-child` → `margin-bottom: 0`
 - `.table-wrapper` → `overflow-x: auto`
 
 ## Результат
 
 - Все этапы заполняют всё доступное пространство справа от sidebar
-- Отступы одинаковые: 20px (padding `.main-content`)
+- Заголовки зафиксированы при скролле контента
 - Вертикальный скролл внутри каждого stage-компонента
 - Нет горизонтального скролла на уровне страницы
 - Контент не уходит под сайдбар
 - Сплит-экран (Requirements) работает корректно
-- Размеры независимы от контента
