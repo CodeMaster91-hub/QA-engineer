@@ -45,6 +45,20 @@
             <span class="slider"></span>
           </label>
         </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Интервал опроса статуса</span>
+            <span class="setting-hint">Частота обновления статуса пайплайна через HTTP (сек)</span>
+          </div>
+          <input
+            type="number"
+            :value="pollInterval"
+            min="5"
+            max="120"
+            class="setting-input"
+            @change="saveSetting('poll_interval', ($event.target as HTMLInputElement).value)"
+          />
+        </div>
       </div>
     </div>
 
@@ -64,6 +78,7 @@ import { api } from '@/api/client'
 const configs = ref<any[]>([])
 const tmsProvider = ref('testrail')
 const showLogs = ref(localStorage.getItem('show_logs') !== 'false')
+const pollInterval = ref(localStorage.getItem('poll_interval') || '15')
 
 const loadConfigs = async () => {
   try {
@@ -233,6 +248,15 @@ h1 {
 .setting-hint {
   font-size: 0.8em;
   color: #999;
+}
+
+.setting-input {
+  width: 80px;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+  text-align: center;
 }
 
 .loading {

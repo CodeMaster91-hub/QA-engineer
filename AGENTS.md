@@ -131,10 +131,36 @@ Requirements restart: при перезапуске `requirements_extracted` LLM
 - **Теги/Requirements/TestData**: inline input с Enter для добавления, ✕ для удаления
 - **Кнопки внизу**: "Сохранить" (активна при изменениях) и "Удалить" (справа)
 
+### SSE и обновление статуса
+
+Обновление UI через 3 параллельных механизма (гибридная схема):
+
+1. **SSE (Server-Sent Events)** — `/api/events/stream/:featureId`:
+   - Backend шлёт keepalive-события (`type: 'keepalive'`) каждые 30 секунд через `interval(30_000).pipe(merge(live$))`
+   - Keepalive предотвращает закрытие SSE браузером/прокси при простое
+   - На фронте `keepalive` события игнорируются (нет обработчика)
+   - SSE ловится в `FeatureDetailView.vue` → `scheduleRefresh()` (debounce 200ms) → HTTP GET `/pipeline/:slug/status`
+   - При переподключении (`?since=` query param) backend возвращает последние 20 событий из ring-buffer (100 событий)
+
+2. **HTTP Polling** — `FeatureDetailView.vue`:
+   - `setInterval` с настраиваемым интервалом (по умолчанию 15 секунд)
+   - Работает только пока pipeline в статусе `running | waiting_for_qa | blocked`
+   - Автоматически останавливается при `completed | failed | cancelled`
+   - Интервал настраивается в `Settings → Интерфейс → poll_interval` (5-120 секунд)
+   - Polling тикает независимо от SSE, debounce (200ms) схлопывает дублирующиеся запросы
+
+3. **Reconnect SSE после действий пользователя** — `reconnectSSE()`:
+   - При каждом действии (`run`, `cancel`, `restart`, `approve`, `answer`, `restart-stage`, `fill-gaps`)
+   - После успешного HTTP-ответа: `close()` старого EventSource → `new EventSource(...)` свежее соединение
+   - Гарантирует, что следующий SSE-поток начнётся с чистого состояния
+
 ### UI-настройки (localStorage)
 
 Настройки интерфейса хранятся в `localStorage` (не в БД):
-- `show_logs` — показывать/скрывать секцию логов (`Settings → Интерфейс`)
+| Ключ | Тип | По умолчанию | Описание |
+|------|-----|-------------|----------|
+| `show_logs` | boolean | `true` | Показывать/скрывать секцию логов (`Settings → Интерфейс`) |
+| `poll_interval` | number (5-120) | `15` | Интервал HTTP-опроса статуса пайплайна в секундах |
 
 ## Features
 

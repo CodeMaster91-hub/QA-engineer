@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, Sse } from '@nestjs/common';
-import { Observable, from, concat, map } from 'rxjs';
+import { Observable, from, concat, merge, interval, map } from 'rxjs';
 import { EventsService, SseEvent } from './events.service';
 
 @Controller('events')
@@ -32,8 +32,13 @@ export class EventsController {
       })),
     );
 
-    // Replay сначала, потом live
-    return concat(replay$, live$);
+    // Keepalive каждые 30 секунд — предотвращает закрытие SSE прокси/браузером
+    const keepalive$ = interval(30_000).pipe(
+      map(() => ({ type: 'keepalive', data: { timestamp: Date.now() } })),
+    );
+
+    // Replay сначала, потом live + keepalive параллельно
+    return concat(replay$, merge(live$, keepalive$));
   }
 
   @Get('health')

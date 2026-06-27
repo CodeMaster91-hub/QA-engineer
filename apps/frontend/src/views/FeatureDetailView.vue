@@ -342,6 +342,7 @@ const runPipeline = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/run`)
     await loadPipeline()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to run pipeline:', e)
   } finally {
@@ -353,6 +354,7 @@ const cancelPipeline = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/cancel`)
     await loadPipeline()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to cancel pipeline:', e)
   }
@@ -364,6 +366,7 @@ const restartPipeline = async () => {
     logEntries.value = []
     selectedStage.value = null
     await loadPipeline()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to restart pipeline:', e)
   }
@@ -374,6 +377,7 @@ const onApprove = async () => {
     await api.post(`/pipeline/${featureSlug.value}/approve`)
     await loadPipeline()
     await loadArtifacts()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to approve:', e)
   }
@@ -384,6 +388,7 @@ const onAnswerQuestions = async () => {
     await api.post(`/pipeline/${featureSlug.value}/answer`)
     await loadPipeline()
     await loadArtifacts()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to answer questions:', e)
   }
@@ -396,6 +401,7 @@ const onRestartStage = async (stageKey: string) => {
     await api.post(`/pipeline/${featureSlug.value}/restart-stage`, { stage: stageUI.backendStage })
     await loadPipeline()
     await loadArtifacts()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to restart stage:', e)
   }
@@ -406,8 +412,12 @@ const onFillGaps = async () => {
   fillingGaps.value = true
   try {
     await api.post(`/pipeline/${featureSlug.value}/fill-gaps`, { gaps: pipeline.value.coverageGaps })
+    await loadPipeline()
+    await loadArtifacts()
+    reconnectSSE()
   } catch (e: any) {
     console.error('Failed to fill gaps:', e)
+  } finally {
     fillingGaps.value = false
   }
 }
@@ -420,10 +430,41 @@ const onPublished = (jobId: string) => {
 let eventSource: EventSource | null = null
 let pipelineRequestCounter = 0
 let refreshTimeout: ReturnType<typeof setTimeout> | null = null
+let pollInterval: ReturnType<typeof setInterval> | null = null
 
 const scheduleRefresh = () => {
   if (refreshTimeout) clearTimeout(refreshTimeout)
   refreshTimeout = setTimeout(refreshPipeline, 200)
+}
+
+const reconnectSSE = () => {
+  eventSource?.close()
+  eventSource = null
+  initSSE()
+}
+
+const getPollIntervalMs = (): number => {
+  const val = parseInt(localStorage.getItem('poll_interval') || '15', 10)
+  return Math.max(5, Math.min(120, val)) * 1000
+}
+
+const startPolling = () => {
+  stopPolling()
+  pollInterval = setInterval(() => {
+    const s = pipeline.value?.status
+    if (s && ['running', 'waiting_for_qa', 'blocked'].includes(s)) {
+      scheduleRefresh()
+    } else {
+      stopPolling()
+    }
+  }, getPollIntervalMs())
+}
+
+const stopPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
 }
 
 const refreshPipeline = () => {
@@ -525,6 +566,7 @@ const loadAll = async () => {
     await loadArtifacts()
     await autoStartPipeline()
     initSSE()
+    startPolling()
 
     // Auto-select first available stage
     if (!selectedStage.value && pipeline.value) {
@@ -544,12 +586,14 @@ onMounted(loadAll)
 watch(featureSlug, () => {
   eventSource?.close()
   eventSource = null
+  stopPolling()
   selectedStage.value = null
   loadAll()
 })
 
 onUnmounted(() => {
   eventSource?.close()
+  stopPolling()
 })
 </script>
 
