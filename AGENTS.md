@@ -110,6 +110,14 @@ Requirements restart: при перезапуске `requirements_extracted` LLM
 
 Исключение: `RequirementsStage` — два side-by-side panel через `.split-container`.
 
+### RequirementsStage — Loading State
+
+`RequirementsStage` показывает источник (левая панель) даже пока LLM работает:
+- **Left panel**: всегда показывает `sourceArtifact` (текст + изображения)
+- **Right panel**: показывает loading-заглушку пока `isProcessing=true` и нет требований
+- **isProcessing**: `true` когда `pipeline.status === 'running' && currentStage === 'requirements_extracted'` и артефакт `requirements` ещё не создан
+- После завершения LLM: требования появляются в правой панели, loading-заглушка исчезает
+
 ### TestCasesStage — Split Layout
 
 `TestCasesStage` использует split layout для редактирования тест-кейсов:

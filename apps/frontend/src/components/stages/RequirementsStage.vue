@@ -34,6 +34,13 @@
         <h3>Требования</h3>
       </div>
       <div class="panel-body">
+        <!-- Loading state -->
+        <div v-if="isProcessing && !requirements.length" class="loading-placeholder">
+          <div class="loading-spinner"></div>
+          <p>LLM анализирует документ и извлекает требования...</p>
+          <p class="loading-hint">Это может занять несколько минут</p>
+        </div>
+
         <QuestionsPanel
           v-if="questions.length"
           :questions="questions"
@@ -60,7 +67,7 @@
             </tbody>
           </table>
         </div>
-        <div v-else class="empty">Нет требований</div>
+        <div v-else-if="!isProcessing" class="empty">Нет требований</div>
       </div>
     </div>
   </div>
@@ -76,6 +83,7 @@ const props = defineProps<{
   sourceArtifact: Artifact | null
   artifact: Artifact | null
   questions: PipelineQuestion[]
+  isProcessing?: boolean
 }>()
 
 defineEmits<{
@@ -316,5 +324,36 @@ th {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Loading placeholder */
+.loading-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #666;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1068bf;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-hint {
+  font-size: 0.85em;
+  color: #999;
+  margin-top: 4px;
 }
 </style>

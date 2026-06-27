@@ -88,8 +88,8 @@
 
       <!-- Stage Content -->
       <div class="stage-content" v-if="selectedStage">
-        <!-- Processing indicator -->
-        <div v-if="isStageProcessing(selectedStage) && !getArtifactForStage(selectedStage)" class="stage-processing">
+        <!-- Processing indicator for stages other than requirements_extracted -->
+        <div v-if="selectedStage !== 'requirements_extracted' && isStageProcessing(selectedStage) && !getArtifactForStage(selectedStage)" class="stage-processing">
           <p>Этап выполняется...</p>
         </div>
         <template v-else>
@@ -98,6 +98,7 @@
           :source-artifact="getArtifact('source')"
           :artifact="getArtifact('requirements')"
           :questions="pipeline?.questions || []"
+          :is-processing="isStageProcessing('requirements_extracted') && !getArtifact('requirements')"
           @answer="onAnswerQuestions"
         />
         <TestPlanStage
