@@ -75,6 +75,8 @@ Restart stage: перезапуск конкретного этапа (`POST /pi
 
 Questions persistence: вопросы сохраняются в `pipeline.questions` и остаются как артефакт после continue/approve.
 
+Answer Questions: `answerQuestions()` переводит pipeline на **следующий stage**, не перезапуская текущий. LLM получает контекст существующих артефактов (REQ и т.д.) при restart.
+
 ### Dry Run — Пробный запуск
 
 Этап `dry_run_completed` (hard stop) распределяет тест-кейсы по секциям TMS:

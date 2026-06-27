@@ -127,42 +127,100 @@ export class WorkflowEngine {
     );
     const sourceContent = sourceArtifact?.content || {};
 
-    const response = await this.llmService.complete(
-      PipelineStage.REQUIREMENTS_EXTRACTED,
-      [
-        {
-          role: 'system',
-          content: `Ты агент Requirements Analyst.
-Извлеки требования из предоставленного текста.
+    const existingArtifact = await this.featuresService.getArtifact(
+      featureId,
+      ArtifactType.REQUIREMENTS,
+    );
+    const existingRequirements = existingArtifact?.content?.requirements || [];
+    const hasExisting = existingRequirements.length > 0;
 
-КРИТИЧНО: requirements НЕ может быть пустым массивом. Каждый документ содержит хотя бы одно требование.
-Если документ не содержит требований — добавь вопрос в open_questions с severity: "high".
+    const systemPrompt = hasExisting
+      ? `Ты агент Requirements Analyst.
+Требования уже были извлечены ранее. Твоя задача — ПРОВЕРИТЬ и ДОПОЛНИТЬ их.
+
+Существующие требования:
+${JSON.stringify(existingRequirements, null, 2)}
+
+Инструкции:
+1. Внимательно прочитай исходный документ
+2. Проверь каждое существующее требование на полноту и корректность
+3. Добавь НОВЫЕ требования, которые были пропущены
+4. Если существующее требование неполное — дополни его
+5. НЕ удаляй существующие требования
+6. НЕ изменяй ID существующих требований (REQ-001, REQ-002...)
+7. Новые требования нумеруй продолжением последовательности
 
 Формат каждого требования:
-- id: REQ-### (последовательная нумерация)
+- id: REQ-### (продолжай нумерацию после последнего существующего)
 - title: краткое название требования
-- description: полное описание
+- description: полное описание (детальное, содержательное)
 - priority: high|medium|low
 - type: functional|non-functional|constraint
+
+КРИТИЧНО:
+- requirements НЕ может быть пустым массивом
+- Каждый документ содержит хотя бы одно требование
+- Анализируй ВСЕ разделы документа, включая неявные требования
+- Учитывай роли, права доступа, бизнес-логику, ограничения, критерии приемки
+- Если обнаружишь противоречия или неполноту — добавь вопрос в open_questions
+
+Верни только JSON без markdown-обёртки:
+{
+  "requirements": [...],
+  "open_questions": [...]
+}`
+      : `Ты агент Requirements Analyst.
+Извлеки ВСЕ требования из предоставленного текста.
+
+ИНСТРУКЦИИ ПО ГЛУБОКОМУ АНАЛИЗУ:
+1. Прочитай документ ЦЕЛИКОМ, включая все разделы
+2. Извлекай требования из:
+   - Описания функционала
+   - Требований и ограничений
+   - Критериев приемки
+   - Ролей и прав доступа
+   - Форматов данных и валидации
+   - BPMN-схем и процессов
+   - UX/UI описаний
+3. Каждое требование должно быть:
+   - Конкретным (не абстрактным)
+   - Проверяемым (имеет критерий проверки)
+   - Изолированным (одно требование = одно действие/свойство)
+4. Если документ содержит неоднозначности — добавь вопрос в open_questions
+
+Формат каждого требования:
+- id: REQ-### (последовательная нумерация с 001)
+- title: краткое название требования
+- description: полное описание (детальное, содержательное)
+- priority: high|medium|low
+- type: functional|non-functional|constraint
+
+КРИТИЧНО: requirements НЕ может быть пустым массивом.
+Если документ не содержит требований — добавь вопрос в open_questions с severity: "high".
 
 Верни только JSON без markdown-обёртки:
 {
   "requirements": [
     {
       "id": "REQ-001",
-      "title": "Регистрация через email",
-      "description": "Пользователь может зарегистрироваться через email",
+      "title": "Название",
+      "description": "Детальное описание требования",
       "priority": "high",
       "type": "functional"
     }
   ],
   "open_questions": []
-}`,
-        },
-        {
-          role: 'user',
-          content: JSON.stringify(sourceContent),
-        },
+}`;
+
+    const userContent = hasExisting
+      ? `Исходный документ:\n${JSON.stringify(sourceContent)}\n\nПроверь и дополни существующие требования.`
+      : JSON.stringify(sourceContent);
+
+    const response = await this.llmService.complete(
+      PipelineStage.REQUIREMENTS_EXTRACTED,
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
       ],
     );
 

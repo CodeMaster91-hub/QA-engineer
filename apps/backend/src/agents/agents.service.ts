@@ -37,8 +37,8 @@ export class AgentsService implements OnModuleInit {
       {
         stage: PipelineStage.REQUIREMENTS_EXTRACTED,
         aliasEnv: 'LLM_ALIAS_REQUIREMENTS',
-        temperature: 0.1,
-        maxTokens: 4096,
+        temperature: 0,
+        maxTokens: 8192,
       },
       {
         stage: PipelineStage.TEST_PLAN_CREATED,

@@ -202,27 +202,46 @@ export class PipelineService {
     }
 
     const currentStage = pipeline.currentStage;
+    const currentIdx = PIPELINE_STAGE_ORDER.indexOf(currentStage);
+    const nextStage = currentIdx >= 0 && currentIdx < PIPELINE_STAGE_ORDER.length - 1
+      ? PIPELINE_STAGE_ORDER[currentIdx + 1]
+      : null;
 
-    // НЕ удаляем questions — остаются как артефакт
     pipeline.blockedStage = null;
-    pipeline.status = PipelineStatus.RUNNING;
-    await this.pipelineRepository.save(pipeline);
+    pipeline.questions = [];
 
-    // Перезапустить текущий этап (чтобы LLM обработал ответы)
-    await this.pipelineQueue.add({
-      pipelineId: pipeline.id,
-      featureId: pipeline.featureId,
-      featureSlug: slug,
-      stage: currentStage,
-    });
+    if (nextStage) {
+      pipeline.currentStage = nextStage;
+      pipeline.status = PipelineStatus.RUNNING;
+      await this.pipelineRepository.save(pipeline);
 
-    await this.eventsService.emit(pipeline.featureId, {
-      type: 'pipeline:stage-update',
-      data: { stage: currentStage, status: StageStatus.Running },
-      timestamp: new Date(),
-    });
+      await this.pipelineQueue.add({
+        pipelineId: pipeline.id,
+        featureId: pipeline.featureId,
+        featureSlug: slug,
+        stage: nextStage,
+      });
 
-    this.logger.log(`Pipeline questions answered, resuming: ${currentStage}`);
+      await this.eventsService.emit(pipeline.featureId, {
+        type: 'pipeline:stage-update',
+        data: { stage: nextStage, status: StageStatus.Running },
+        timestamp: new Date(),
+      });
+
+      this.logger.log(`Pipeline questions answered, advancing: ${currentStage} → ${nextStage}`);
+    } else {
+      pipeline.status = PipelineStatus.COMPLETED;
+      await this.pipelineRepository.save(pipeline);
+
+      await this.eventsService.emit(pipeline.featureId, {
+        type: 'pipeline:completed',
+        data: { stage: currentStage },
+        timestamp: new Date(),
+      });
+
+      this.logger.log(`Pipeline questions answered, completed at: ${currentStage}`);
+    }
+
     return pipeline;
   }
 
