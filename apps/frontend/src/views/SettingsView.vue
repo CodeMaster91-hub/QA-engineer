@@ -63,7 +63,7 @@ import { api } from '@/api/client'
 
 const configs = ref<any[]>([])
 const tmsProvider = ref('testrail')
-const showLogs = ref(true)
+const showLogs = ref(localStorage.getItem('show_logs') !== 'false')
 
 const loadConfigs = async () => {
   try {
@@ -71,17 +71,6 @@ const loadConfigs = async () => {
     configs.value = response.data
   } catch (e) {
     console.error('Failed to load configs:', e)
-  }
-}
-
-const loadSettings = async () => {
-  try {
-    const settings = await api.get<Record<string, any>>('/users/settings')
-    if ('show_logs' in settings) {
-      showLogs.value = settings.show_logs
-    }
-  } catch (e) {
-    console.error('Failed to load settings:', e)
   }
 }
 
@@ -93,18 +82,11 @@ const saveConfig = async (config: any) => {
   }
 }
 
-const saveSetting = async (key: string, value: any) => {
-  try {
-    await api.patch(`/users/settings/${key}`, { value })
-  } catch (e) {
-    console.error('Failed to save setting:', e)
-  }
+const saveSetting = (key: string, value: any) => {
+  localStorage.setItem(key, JSON.stringify(value))
 }
 
-onMounted(() => {
-  loadConfigs()
-  loadSettings()
-})
+onMounted(loadConfigs)
 </script>
 
 <style scoped>

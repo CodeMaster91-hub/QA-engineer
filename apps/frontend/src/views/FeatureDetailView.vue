@@ -186,7 +186,7 @@ const selectedStage = ref<string | null>(null)
 const fillingGaps = ref(false)
 
 const logEntries = ref<Array<{ level: 'info' | 'warn' | 'error'; message: string }>>([])
-const showLogs = ref(true)
+const showLogs = ref(localStorage.getItem('show_logs') !== 'false')
 
 const pipelineStages = computed(() => {
   if (!pipeline.value) return []
@@ -516,24 +516,13 @@ const initSSE = () => {
   }
 }
 
-const loadSettings = async () => {
-  try {
-    const settings = await api.get<Record<string, any>>('/users/settings')
-    if ('show_logs' in settings) {
-      showLogs.value = settings.show_logs
-    }
-  } catch {
-    // keep default
-  }
-}
-
 const loadAll = async () => {
   loading.value = true
   error.value = ''
   logEntries.value = []
 
   try {
-    await Promise.all([loadFeature(), loadSettings()])
+    await loadFeature()
     await loadPipeline()
     await loadArtifacts()
     await autoStartPipeline()
