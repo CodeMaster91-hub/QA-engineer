@@ -59,7 +59,7 @@ const cases = computed(() => {
 }
 
 .panel-header {
-  padding: 16px 20px 12px;
+  padding: 13px 20px 10px;
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }

@@ -98,7 +98,7 @@ const statusClass = (status: string) => {
 }
 
 .panel-header {
-  padding: 16px 20px 12px;
+  padding: 13px 20px 10px;
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }

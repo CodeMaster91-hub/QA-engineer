@@ -595,7 +595,7 @@ onUnmounted(() => {
   margin-bottom: 16px;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 12px 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
 }
@@ -638,21 +638,23 @@ onUnmounted(() => {
 .pipeline-section {
   background: white;
   border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: 6px 10px;
+  margin-bottom: 5px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: visible;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .pipeline-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 .pipeline-bar-wrapper {
-  flex: 1;
   overflow-x: auto;
   overflow-y: visible;
 }
@@ -664,9 +666,9 @@ onUnmounted(() => {
 }
 
 .pipeline-info {
-  margin-top: 12px;
+  margin-top: 7px;
   display: flex;
-  gap: 16px;
+  gap: 10px;
   align-items: center;
 }
 

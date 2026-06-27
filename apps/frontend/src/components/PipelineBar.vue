@@ -117,18 +117,18 @@ const connectorClass = (status: string) => {
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 16px 8px;
+  padding: 6px 5px;
   overflow: hidden;
 }
 
 .pipeline-stage {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   position: relative;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 16px;
+  padding: 4px 7px;
+  border-radius: 12px;
   outline: 2px solid transparent;
   transition: outline-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -144,8 +144,8 @@ const connectorClass = (status: string) => {
 }
 
 .stage-node {
-  width: 28px;
-  height: 28px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -197,7 +197,7 @@ const connectorClass = (status: string) => {
 .status-queued { color: #1068bf; }
 
 .stage-label {
-  font-size: 0.75em;
+  font-size: 0.65em;
   font-weight: 500;
   color: #303030;
   white-space: nowrap;
@@ -205,10 +205,10 @@ const connectorClass = (status: string) => {
 }
 
 .stage-connector {
-  width: 24px;
+  width: 14px;
   height: 2px;
   background: #dbdbdb;
-  margin: 0 4px;
+  margin: 0 3px;
   flex-shrink: 0;
   transition: background 0.3s ease;
 }

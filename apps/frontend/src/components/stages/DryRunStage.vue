@@ -25,69 +25,84 @@
 
     <div class="panel-body">
       <template v-if="dryRunData">
-        <div class="split-container">
-          <div class="cases-panel">
-            <div class="panel-title">Тест-кейсы ({{ cases.length }})</div>
-            <div class="cases-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Секция</th>
-                    <th>Статус</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="tc in cases" :key="tc.id">
-                    <td class="tc-id">{{ tc.id }}</td>
-                    <td>{{ tc.title }}</td>
-                    <td>
-                      <span v-if="tc.targetSectionId" class="section-existing">
-                        {{ getSectionName(tc.targetSectionId) }}
-                      </span>
-                      <span v-else-if="tc.targetSectionName" class="section-new">
-                        [Новая] {{ tc.targetSectionName }}
-                      </span>
-                      <span v-else class="section-unassigned">—</span>
-                    </td>
-                    <td>
-                      <span :class="['badge', `badge-${tc.status}`]">
-                        {{ tc.status === 'approved' ? 'Апрув' : 'Драфт' }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+        <div class="split-container" ref="containerRef">
+          <div class="split-panel cases-panel" :style="{ width: leftWidth + 'px' }">
+            <div class="panel-header">
+              <h3>Тест-кейсы ({{ cases.length }})</h3>
+            </div>
+            <div class="panel-body">
+              <div class="cases-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Title</th>
+                      <th>Секция</th>
+                      <th>Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="tc in cases" :key="tc.id">
+                      <td class="tc-id">{{ tc.id }}</td>
+                      <td>{{ tc.title }}</td>
+                      <td>
+                        <span v-if="tc.targetSectionId" class="section-existing">
+                          {{ getSectionName(tc.targetSectionId) }}
+                        </span>
+                        <span v-else-if="tc.targetSectionName" class="section-new">
+                          [Новая] {{ tc.targetSectionName }}
+                        </span>
+                        <span v-else class="section-unassigned">—</span>
+                      </td>
+                      <td>
+                        <span :class="['badge', `badge-${tc.status}`]">
+                          {{ tc.status === 'approved' ? 'Апрув' : 'Драфт' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          <div class="sections-panel">
-            <div class="panel-title">Секции TestRail</div>
+          <div
+            class="split-divider"
+            :class="{ dragging: isDragging }"
+            @mousedown="startDrag"
+          >
+            <div class="divider-handle">⋮⋮</div>
+          </div>
 
-            <div v-if="existingSections.length" class="section-group">
-              <div class="section-group-label">Существующие</div>
-              <div
-                v-for="sec in existingSections"
-                :key="sec.id"
-                class="section-item"
-              >
-                <span class="section-dot section-dot-existing"></span>
-                {{ sec.name }}
-                <span class="section-count">{{ getCasesForSection(sec.id).length }}</span>
-              </div>
+          <div class="split-panel sections-panel" :style="{ width: rightWidth + 'px' }">
+            <div class="panel-header">
+              <h3>Секции TestRail</h3>
             </div>
+            <div class="panel-body">
+              <div v-if="existingSections.length" class="section-group">
+                <div class="section-group-label">Существующие</div>
+                <div
+                  v-for="sec in existingSections"
+                  :key="sec.id"
+                  class="section-item"
+                >
+                  <span class="section-dot section-dot-existing"></span>
+                  {{ sec.name }}
+                  <span class="section-count">{{ getCasesForSection(sec.id).length }}</span>
+                </div>
+              </div>
 
-            <div v-if="newSections.length" class="section-group">
-              <div class="section-group-label">Новые (к созданию)</div>
-              <div
-                v-for="(sec, idx) in newSections"
-                :key="idx"
-                class="section-item"
-              >
-                <span class="section-dot section-dot-new"></span>
-                {{ sec.name }}
-                <span class="section-count">{{ getCasesForNewSection(sec.name).length }}</span>
+              <div v-if="newSections.length" class="section-group">
+                <div class="section-group-label">Новые (к созданию)</div>
+                <div
+                  v-for="(sec, idx) in newSections"
+                  :key="idx"
+                  class="section-item"
+                >
+                  <span class="section-dot section-dot-new"></span>
+                  {{ sec.name }}
+                  <span class="section-count">{{ getCasesForNewSection(sec.name).length }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -100,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { Artifact, DryRunArtifact } from '@/api/types'
 
 const props = defineProps<{
@@ -135,6 +150,72 @@ const getCasesForSection = (sectionId: string) => {
 const getCasesForNewSection = (sectionName: string) => {
   return cases.value.filter((c) => c.targetSectionName === sectionName)
 }
+
+const containerRef = ref<HTMLElement | null>(null)
+const leftWidth = ref(400)
+const rightWidth = ref(400)
+const isDragging = ref(false)
+const MIN_PANEL_WIDTH = 250
+
+const recalcPanels = () => {
+  if (!containerRef.value) return
+  const w = containerRef.value.clientWidth
+  const total = w - 8
+  if (leftWidth.value + rightWidth.value !== total) {
+    const ratio = leftWidth.value / (leftWidth.value + rightWidth.value || 1)
+    leftWidth.value = Math.max(MIN_PANEL_WIDTH, Math.min(total - MIN_PANEL_WIDTH, Math.round(total * ratio)))
+    rightWidth.value = total - leftWidth.value
+  }
+}
+
+const startDrag = (e: MouseEvent) => {
+  e.preventDefault()
+  isDragging.value = true
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const onDrag = (e: MouseEvent) => {
+  if (!containerRef.value) return
+  const containerRect = containerRef.value.getBoundingClientRect()
+  const x = e.clientX - containerRect.left
+  const newLeft = Math.max(MIN_PANEL_WIDTH, Math.min(x, containerRect.width - MIN_PANEL_WIDTH - 8))
+  leftWidth.value = newLeft
+  rightWidth.value = containerRect.width - newLeft - 8
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (containerRef.value) {
+    const w = containerRef.value.clientWidth
+    leftWidth.value = Math.round(w * 0.65)
+    rightWidth.value = w - leftWidth.value - 8
+  }
+  resizeObserver = new ResizeObserver(recalcPanels)
+  if (containerRef.value) {
+    resizeObserver.observe(containerRef.value)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+})
 </script>
 
 <style scoped>
@@ -150,52 +231,52 @@ const getCasesForNewSection = (sectionName: string) => {
   width: 100%;
 }
 
-.panel-header {
-  padding: 16px 20px 12px;
+.stage-panel > .panel-header {
+  padding: 5px 20px 3px;
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }
 
-.panel-header h3 {
-  margin: 0 0 12px 0;
+.stage-panel > .panel-header h3 {
+  margin: 0 0 3px 0;
   color: #1a1a2e;
   font-size: 1.1em;
 }
 
-.panel-body {
-  padding: 16px 20px;
-  overflow-y: auto;
+.stage-panel > .panel-body {
+  padding: 0 20px;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
 .stat-card {
   background: #f7f8fa;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 6px;
+  padding: 8px;
   text-align: center;
-  height: 74px;
+  height: 50px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .stat-value {
-  font-size: 1.5em;
+  font-size: 1.35em;
   font-weight: 700;
   color: #1068bf;
 }
 
 .stat-label {
-  font-size: 0.75em;
+  font-size: 0.68em;
   color: #666;
-  margin-top: 2px;
 }
 
 .stat-approved .stat-value {
@@ -212,24 +293,71 @@ const getCasesForNewSection = (sectionName: string) => {
 
 .split-container {
   display: flex;
-  gap: 16px;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
-.cases-panel {
-  flex: 65;
-  min-width: 0;
+.split-panel {
+  min-height: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.sections-panel {
-  flex: 35;
-  border-left: 1px solid #eee;
-  padding-left: 16px;
+.split-panel > .panel-header {
+  padding: 13px 20px 10px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
 }
 
-.panel-title {
-  font-weight: 600;
-  color: #303030;
-  margin-bottom: 12px;
+.split-panel > .panel-header h3 {
+  margin: 0;
+  color: #1a1a2e;
+  font-size: 1.1em;
+}
+
+.split-panel > .panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.split-divider {
+  width: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.split-divider:hover,
+.split-divider.dragging {
+  background: rgba(16, 104, 191, 0.1);
+}
+
+.divider-handle {
+  color: #ccc;
+  font-size: 10px;
+  line-height: 1;
+  transition: color 0.15s;
+  pointer-events: none;
+}
+
+.split-divider:hover .divider-handle,
+.split-divider.dragging .divider-handle {
+  color: #1068bf;
 }
 
 .cases-table {

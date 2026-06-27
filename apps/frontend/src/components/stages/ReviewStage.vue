@@ -206,13 +206,13 @@ const severityLabel = (severity: string) => {
 }
 
 .panel-header {
-  padding: 16px 20px 12px;
+  padding: 5px 20px 3px;
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }
 
 .panel-header h3 {
-  margin: 0 0 12px 0;
+  margin: 0 0 3px 0;
   color: #1a1a2e;
   font-size: 1.1em;
 }
@@ -226,31 +226,30 @@ const severityLabel = (severity: string) => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  gap: 8px;
 }
 
 .stat-card {
   background: #f7f8fa;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 6px;
+  padding: 8px;
   text-align: center;
-  height: 74px;
+  height: 50px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .stat-value {
-  font-size: 1.5em;
+  font-size: 1.35em;
   font-weight: 700;
   color: #1068bf;
 }
 
 .stat-label {
-  font-size: 0.75em;
+  font-size: 0.68em;
   color: #666;
-  margin-top: 2px;
 }
 
 .report-section {
