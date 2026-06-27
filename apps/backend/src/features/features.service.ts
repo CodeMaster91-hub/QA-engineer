@@ -122,7 +122,8 @@ export class FeaturesService {
 
     const preview = processedContent.text.substring(0, 500);
 
-    const { title, slug } = this.generateTitleAndSlug(preview);
+    const { title, slug: baseSlug } = this.generateTitleAndSlug(preview);
+    const slug = await this.generateUniqueSlug(baseSlug);
 
     const feature = await this.create(slug, title);
     feature.sourceType = sourceType;
@@ -185,6 +186,18 @@ export class FeaturesService {
       .substring(0, 50);
 
     return base || 'feature';
+  }
+
+  private async generateUniqueSlug(baseSlug: string): Promise<string> {
+    let slug = baseSlug;
+    let counter = 2;
+
+    while (await this.featuresRepository.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    return slug;
   }
 
   async updateStatus(slug: string, status: FeatureStatus): Promise<Feature> {
