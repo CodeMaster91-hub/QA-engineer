@@ -32,7 +32,7 @@ apps/
     │   ├── Sidebar.vue - Левое меню (список фич, SSE, collapse)
     │   ├── stages/     - Stage-компоненты (Requirements, TestPlan, TestCases, etc.)
     │   └── __tests__/  - Тесты компонентов
-    ├── composables/    - Vue composables (useSse)
+     ├── composables/    - Vue composables (useSse, useTestCases)
     ├── utils/          - Утилиты (markdown renderer)
     ├── views/          - Vue страницы
     └── router/         - Vue Router
@@ -90,7 +90,7 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 | source | `{ text, images }` | markdown → HTML |
 | requirements | `{ requirements: [] }` | JSON → таблица |
 | testplan | `{ test_plan_markdown }` | markdown → HTML |
-| testcases | `{ cases: [] }` | JSON → таблица |
+| testcases | `{ cases: [] }` | Split layout: список слева, редактор справа |
 | coverage | `{ coverage, coverage_matrix_markdown, gaps }` | JSON + markdown |
 | review | `{ ... }` | JSON |
 | dry_run | `{ sections: { existing, new }, cases: [], summary: {} }` | Summary cards + таблица + секции |
@@ -105,6 +105,16 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 - `.panel-body` → `flex: 1`, `overflow-y: auto` — только контент скроллится
 
 Исключение: `RequirementsStage` — два side-by-side panel через `.split-container`.
+
+### TestCasesStage — Split Layout
+
+`TestCasesStage` использует split layout для редактирования тест-кейсов:
+- **Левая панель (40%)**: кликабельный список кейсов (id, title, steps count, status badge)
+- **Правая панель (60%)**: форма редактирования "Редактирование кейса"
+- **Композабл `useTestCases`**: управление состоянием, snapshot для отслеживания изменений, save/delete
+- **Steps**: горизонтальные поля (action + expected), кнопки ↑↓ для перемещения, ✕ удалить, "+ Добавить шаг"
+- **Теги/Requirements/TestData**: inline input с Enter для добавления, ✕ для удаления
+- **Кнопки внизу**: "Сохранить" (активна при изменениях) и "Удалить" (справа)
 
 ### UI-настройки (localStorage)
 

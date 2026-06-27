@@ -3,46 +3,296 @@
     <div class="panel-header">
       <h3>Тест-кейсы ({{ cases.length }})</h3>
     </div>
-    <div class="panel-body">
-      <div v-if="cases.length" class="cases-table">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Steps</th>
-              <th>Status</th>
-              <th>Requirements</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="tc in cases" :key="tc.id">
-              <td class="tc-id">{{ tc.id }}</td>
-              <td>{{ tc.title }}</td>
-              <td>{{ tc.steps?.length || 0 }}</td>
-              <td><span :class="['badge', `badge-${tc.status}`]">{{ tc.status }}</span></td>
-              <td class="req-ids">{{ (tc.requirement_ids || []).join(', ') }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="panel-content">
+      <!-- Left: Cases list -->
+      <div class="cases-list">
+        <div v-if="cases.length" class="cases-scroll">
+          <div
+            v-for="(tc, idx) in cases"
+            :key="tc.id"
+            :class="['case-row', { selected: selectedIndex === idx }]"
+            @click="selectCase(idx)"
+          >
+            <span class="tc-id">{{ tc.id }}</span>
+            <span class="tc-title">{{ tc.title }}</span>
+            <span class="tc-steps">{{ tc.steps?.length || 0 }} steps</span>
+            <span :class="['badge', `badge-${tc.status}`]">{{ tc.status }}</span>
+          </div>
+        </div>
+        <div v-else class="empty">Нет тест-кейсов</div>
       </div>
-      <div v-else class="empty">Нет тест-кейсов</div>
+
+      <!-- Divider -->
+      <div class="split-divider"></div>
+
+      <!-- Right: Editor -->
+      <div class="case-editor">
+        <template v-if="selectedCase">
+          <div class="editor-header">
+            <h4>Редактирование кейса</h4>
+          </div>
+          <div class="editor-body">
+            <!-- Title -->
+            <div class="field">
+              <label>Title</label>
+              <input
+                type="text"
+                :value="selectedCase.title"
+                @input="updateField('title', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
+
+            <!-- Priority + Type -->
+            <div class="field-row">
+              <div class="field">
+                <label>Priority</label>
+                <select
+                  :value="selectedCase.priority"
+                  @change="updateField('priority', ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Type</label>
+                <select
+                  :value="selectedCase.type"
+                  @change="updateField('type', ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="positive">Positive</option>
+                  <option value="negative">Negative</option>
+                  <option value="validation">Validation</option>
+                  <option value="boundary">Boundary</option>
+                  <option value="permission">Permission</option>
+                  <option value="integration">Integration</option>
+                  <option value="regression">Regression</option>
+                  <option value="smoke">Smoke</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="field-row">
+              <div class="field">
+                <label>Status</label>
+                <select
+                  :value="selectedCase.status"
+                  @change="updateField('status', ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="approved">Approved</option>
+                  <option value="needs_clarification">Needs Clarification</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Automation</label>
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    :checked="selectedCase.automation_candidate"
+                    @change="updateField('automation_candidate', ($event.target as HTMLInputElement).checked)"
+                  />
+                  Candidate
+                </label>
+              </div>
+            </div>
+
+            <!-- Preconditions -->
+            <div class="field">
+              <label>Preconditions</label>
+              <textarea
+                :value="selectedCase.preconditions"
+                @input="updateField('preconditions', ($event.target as HTMLTextAreaElement).value)"
+                rows="2"
+              ></textarea>
+            </div>
+
+            <!-- Final Expected Result -->
+            <div class="field">
+              <label>Final Expected Result</label>
+              <textarea
+                :value="selectedCase.final_expected_result"
+                @input="updateField('final_expected_result', ($event.target as HTMLTextAreaElement).value)"
+                rows="2"
+              ></textarea>
+            </div>
+
+            <!-- Steps -->
+            <div class="field">
+              <div class="field-header">
+                <label>Steps</label>
+                <button class="btn-add" @click="addStep">+ Добавить шаг</button>
+              </div>
+              <div v-if="selectedCase.steps.length" class="steps-list">
+                <div v-for="(step, sIdx) in selectedCase.steps" :key="sIdx" class="step-item">
+                  <span class="step-num">{{ sIdx + 1 }}.</span>
+                  <div class="step-fields">
+                    <input
+                      type="text"
+                      :value="step.action"
+                      placeholder="Действие"
+                      @input="updateStepField(sIdx, 'action', ($event.target as HTMLInputElement).value)"
+                    />
+                    <input
+                      type="text"
+                      :value="step.expected"
+                      placeholder="Ожидание"
+                      @input="updateStepField(sIdx, 'expected', ($event.target as HTMLInputElement).value)"
+                    />
+                  </div>
+                  <div class="step-actions">
+                    <button
+                      class="btn-icon"
+                      :disabled="sIdx === 0"
+                      @click="moveStepUp(sIdx)"
+                      title="Вверх"
+                    >↑</button>
+                    <button
+                      class="btn-icon"
+                      :disabled="sIdx === selectedCase.steps.length - 1"
+                      @click="moveStepDown(sIdx)"
+                      title="Вниз"
+                    >↓</button>
+                    <button
+                      class="btn-icon btn-icon-danger"
+                      @click="removeStep(sIdx)"
+                      title="Удалить"
+                    >✕</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-steps">Нет шагов</div>
+            </div>
+
+            <!-- Requirements -->
+            <div class="field">
+              <label>Requirements</label>
+              <div class="tags-container">
+                <span v-for="(req, rIdx) in selectedCase.requirement_ids" :key="rIdx" class="tag">
+                  {{ req }}
+                  <button class="tag-remove" @click="removeRequirement(rIdx)">✕</button>
+                </span>
+                <input
+                  type="text"
+                  class="tag-input"
+                  placeholder="REQ-001"
+                  @keydown.enter.prevent="addReq(($event.target as HTMLInputElement).value); ($event.target as HTMLInputElement).value = ''"
+                />
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="field">
+              <label>Tags</label>
+              <div class="tags-container">
+                <span v-for="(tag, tIdx) in selectedCase.tags" :key="tIdx" class="tag">
+                  {{ tag }}
+                  <button class="tag-remove" @click="removeTag(tIdx)">✕</button>
+                </span>
+                <input
+                  type="text"
+                  class="tag-input"
+                  placeholder="tag"
+                  @keydown.enter.prevent="addTag(($event.target as HTMLInputElement).value); ($event.target as HTMLInputElement).value = ''"
+                />
+              </div>
+            </div>
+
+            <!-- Test Data -->
+            <div class="field">
+              <label>Test Data</label>
+              <div class="tags-container">
+                <span v-for="(td, dIdx) in selectedCase.test_data" :key="dIdx" class="tag">
+                  {{ td }}
+                  <button class="tag-remove" @click="removeTestData(dIdx)">✕</button>
+                </span>
+                <input
+                  type="text"
+                  class="tag-input"
+                  placeholder="data value"
+                  @keydown.enter.prevent="addTestData(($event.target as HTMLInputElement).value); ($event.target as HTMLInputElement).value = ''"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer buttons -->
+          <div class="editor-footer">
+            <button class="btn btn-save" :disabled="!isDirty || saving" @click="onSave">
+              {{ saving ? 'Сохранение...' : 'Сохранить' }}
+            </button>
+            <button class="btn btn-delete" @click="onDelete">Удалить</button>
+          </div>
+        </template>
+
+        <div v-else class="empty-editor">
+          Выберите тест-кейс для редактирования
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Artifact } from '@/api/types'
+import { watch } from 'vue';
+import type { Artifact } from '@/api/types';
+import { useTestCases } from '@/composables/useTestCases';
 
 const props = defineProps<{
-  artifact: Artifact | null
-}>()
+  artifact: Artifact | null;
+  slug: string;
+}>();
 
-const cases = computed(() => {
-  const content = props.artifact?.content
-  return content?.cases || []
-})
+const emit = defineEmits<{
+  saved: [];
+}>();
+
+const {
+  cases,
+  selectedIndex,
+  selectedCase,
+  isDirty,
+  saving,
+  syncFromArtifact,
+  selectCase,
+  updateField,
+  addStep,
+  removeStep,
+  moveStepUp,
+  moveStepDown,
+  updateStepField,
+  addTag,
+  removeTag,
+  addRequirement,
+  removeRequirement,
+  addTestData,
+  removeTestData,
+  deleteCase,
+  save,
+} = useTestCases(props.artifact);
+
+watch(
+  () => props.artifact,
+  (art) => syncFromArtifact(art),
+);
+
+async function onSave() {
+  await save(props.slug);
+  emit('saved');
+}
+
+function onDelete() {
+  deleteCase();
+}
+
+function addReq(value: string) {
+  addRequirement(value);
+}
 </script>
 
 <style scoped>
@@ -70,71 +320,388 @@ const cases = computed(() => {
   font-size: 1.1em;
 }
 
-.panel-body {
-  padding: 16px 20px;
-  overflow-y: auto;
+.panel-content {
+  display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
-.cases-table {
+/* Left panel — cases list */
+.cases-list {
+  width: 40%;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cases-scroll {
   flex: 1;
-  min-width: 0;
-  min-height: 0;
-  overflow-x: auto;
   overflow-y: auto;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9em;
+.case-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-th, td {
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
+.case-row:hover {
+  background: #f7f8fa;
 }
 
-th {
-  font-weight: 600;
-  color: #303030;
-  background: #f9f9f9;
+.case-row.selected {
+  background: #e8f0fe;
+  border-left: 3px solid #1a73e8;
 }
 
 .tc-id {
   font-family: monospace;
-  font-weight: 500;
+  font-weight: 600;
   color: #1068bf;
+  min-width: 60px;
 }
 
-.req-ids {
-  font-family: monospace;
-  font-size: 0.85em;
-  color: #666;
-}
-
-.badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.badge-draft { background: #f5f5f5; color: #666; }
-.badge-approved { background: #e8f5e9; color: #2da160; }
-.badge-needs_clarification { background: #fff3e0; color: #ef6c00; }
-.badge-rejected { background: #ffebee; color: #c62828; }
-
-.empty {
+.tc-title {
   flex: 1;
-  min-height: 0;
-  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+
+.tc-steps {
+  font-size: 0.8em;
+  color: #888;
+  white-space: nowrap;
+}
+
+/* Divider */
+.split-divider {
+  width: 1px;
+  background: #e0e0e0;
+  flex-shrink: 0;
+}
+
+/* Right panel — editor */
+.case-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.editor-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.editor-header h4 {
+  margin: 0;
+  font-size: 1em;
+  color: #333;
+}
+
+.editor-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.editor-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Fields */
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.field input[type="text"],
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.field input[type="text"]:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.15);
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.field-row .field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400 !important;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+}
+
+/* Steps */
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.field-header label {
+  margin-bottom: 0;
+}
+
+.btn-add {
+  padding: 4px 10px;
+  font-size: 0.8em;
+  background: #e8f0fe;
+  color: #1a73e8;
+  border: 1px solid #c2d7f5;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-add:hover {
+  background: #d2e3fc;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #fafbfc;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.step-num {
+  font-weight: 600;
+  color: #888;
+  min-width: 24px;
   text-align: center;
+}
+
+.step-fields {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+}
+
+.step-fields input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.step-fields input:focus {
+  outline: none;
+  border-color: #1a73e8;
+}
+
+.step-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.85em;
+  transition: background 0.15s;
 }
+
+.btn-icon:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.btn-icon:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.btn-icon-danger:hover:not(:disabled) {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.empty-steps {
+  color: #aaa;
+  font-size: 0.85em;
+  padding: 8px 0;
+}
+
+/* Tags / Requirements / Test Data */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-height: 34px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #e8f0fe;
+  color: #1a73e8;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-family: monospace;
+}
+
+.tag-remove {
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  font-size: 0.9em;
+  padding: 0 2px;
+}
+
+.tag-remove:hover {
+  color: #c62828;
+}
+
+.tag-input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 2px 4px !important;
+  font-size: 0.85em;
+  min-width: 80px;
+  flex: 1;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-save {
+  background: #1a73e8;
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #1557b0;
+}
+
+.btn-save:disabled {
+  background: #ccc;
+  cursor: default;
+}
+
+.btn-delete {
+  background: #fff;
+  color: #c62828;
+  border: 1px solid #e0e0e0;
+  margin-left: auto;
+}
+
+.btn-delete:hover {
+  background: #ffebee;
+  border-color: #c62828;
+}
+
+/* Empty state */
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+.empty-editor {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 0.95em;
+}
+
+/* Badge */
+.badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  font-weight: 500;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge-draft { background: #f5f5f5; color: #666; }
+.badge-reviewed { background: #e3f2fd; color: #1565c0; }
+.badge-approved { background: #e8f5e9; color: #2da160; }
+.badge-needs_clarification { background: #fff3e0; color: #ef6c00; }
 </style>

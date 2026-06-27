@@ -110,6 +110,27 @@ export interface DryRunArtifact {
   };
 }
 
+export interface TestStep {
+  action: string;
+  expected: string;
+}
+
+export interface TestCase {
+  id: string;
+  title: string;
+  section?: string;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  type: 'positive' | 'negative' | 'validation' | 'boundary' | 'permission' | 'integration' | 'regression' | 'smoke' | 'other';
+  status: 'draft' | 'reviewed' | 'approved' | 'needs_clarification';
+  automation_candidate: boolean;
+  preconditions: string;
+  steps: TestStep[];
+  final_expected_result: string;
+  requirement_ids: string[];
+  test_data: string[];
+  tags: string[];
+}
+
 export interface Artifact {
   id: string;
   featureId: string;

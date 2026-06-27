@@ -110,6 +110,7 @@
         <TestCasesStage
           v-else-if="selectedStage === 'test_cases'"
           :artifact="getArtifact('testcases')"
+          :slug="featureSlug"
         />
         <CoverageStage
           v-else-if="selectedStage === 'coverage_audited'"
