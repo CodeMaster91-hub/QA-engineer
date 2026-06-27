@@ -25,13 +25,6 @@
             {{ pipelineStatusText }}
           </span>
           <button
-            v-if="pipeline?.status === 'blocked'"
-            class="btn btn-continue"
-            @click="onAnswerQuestions"
-          >
-            Продолжить
-          </button>
-          <button
             v-if="pipeline?.status === 'waiting_for_qa'"
             class="btn btn-approve"
             @click="onApprove"
@@ -69,6 +62,14 @@
               class="btn btn-danger"
             >
               ⏹ Стоп
+            </button>
+
+            <button
+              v-if="pipeline?.status === 'blocked'"
+              class="btn btn-continue"
+              @click="onAnswerQuestions"
+            >
+              Продолжить
             </button>
 
             <button
