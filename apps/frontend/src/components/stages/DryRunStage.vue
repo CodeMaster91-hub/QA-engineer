@@ -2,28 +2,29 @@
   <div class="stage-panel">
     <div class="panel-header">
       <h3>Dry Run — Пробный запуск</h3>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">{{ summary.total }}</div>
+          <div class="stat-label">Всего кейсов</div>
+        </div>
+        <div class="stat-card stat-approved">
+          <div class="stat-value">{{ summary.approved }}</div>
+          <div class="stat-label">Апрувнуты</div>
+        </div>
+        <div class="stat-card stat-draft">
+          <div class="stat-value">{{ summary.draft }}</div>
+          <div class="stat-label">Черновики</div>
+        </div>
+        <div class="stat-card stat-sections">
+          <div class="stat-value">{{ summary.existingSections }} + {{ summary.newSections }}</div>
+          <div class="stat-label">Секции</div>
+        </div>
+      </div>
     </div>
+
     <div class="panel-body">
       <template v-if="dryRunData">
-        <div class="summary-cards">
-          <div class="card">
-            <div class="value">{{ summary.total }}</div>
-            <div class="label">Всего кейсов</div>
-          </div>
-          <div class="card card-approved">
-            <div class="value">{{ summary.approved }}</div>
-            <div class="label">Апрувнуты</div>
-          </div>
-          <div class="card card-draft">
-            <div class="value">{{ summary.draft }}</div>
-            <div class="label">Черновики</div>
-          </div>
-          <div class="card card-sections">
-            <div class="value">{{ summary.existingSections }} + {{ summary.newSections }}</div>
-            <div class="label">Секции</div>
-          </div>
-        </div>
-
         <div class="split-container">
           <div class="cases-panel">
             <div class="panel-title">Тест-кейсы ({{ cases.length }})</div>
@@ -156,7 +157,7 @@ const getCasesForNewSection = (sectionName: string) => {
 }
 
 .panel-header h3 {
-  margin: 0;
+  margin: 0 0 12px 0;
   color: #1a1a2e;
   font-size: 1.1em;
 }
@@ -168,41 +169,44 @@ const getCasesForNewSection = (sectionName: string) => {
   min-height: 0;
 }
 
-.summary-cards {
+.stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  margin-bottom: 20px;
 }
 
-.card {
-  background: #f9f9f9;
+.stat-card {
+  background: #f7f8fa;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
   text-align: center;
+  height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.card .value {
-  font-size: 1.8em;
+.stat-value {
+  font-size: 1.5em;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #1068bf;
 }
 
-.card .label {
-  font-size: 0.85em;
+.stat-label {
+  font-size: 0.75em;
   color: #666;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
-.card-approved .value {
+.stat-approved .stat-value {
   color: #2da160;
 }
 
-.card-draft .value {
+.stat-draft .stat-value {
   color: #999;
 }
 
-.card-sections .value {
+.stat-sections .stat-value {
   color: #1565c0;
 }
 

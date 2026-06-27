@@ -235,6 +235,10 @@ const severityLabel = (severity: string) => {
   border-radius: 8px;
   padding: 12px;
   text-align: center;
+  height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stat-value {
