@@ -207,6 +207,11 @@ export class PipelineService {
       ? PIPELINE_STAGE_ORDER[currentIdx + 1]
       : null;
 
+    pipeline.stageResults[currentStage] = {
+      ...pipeline.stageResults[currentStage],
+      status: 'completed',
+    };
+
     pipeline.blockedStage = null;
     pipeline.questions = [];
 
