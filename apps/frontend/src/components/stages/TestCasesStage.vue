@@ -281,6 +281,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import type { Artifact } from '@/api/types';
 import { useTestCases } from '@/composables/useTestCases';
+import { useTestCasesFilters } from '@/composables/useTestCasesFilters';
 
 const props = defineProps<{
   artifact: Artifact | null;
@@ -317,9 +318,7 @@ const {
   save,
 } = useTestCases(props.artifact);
 
-const statusFilter = ref('')
-const typeFilter = ref('')
-const reqFilter = ref('')
+const { statusFilter, typeFilter, reqFilter } = useTestCasesFilters()
 
 const reqOptions = computed(() => {
   const reqs = props.requirementsArtifact?.content?.requirements
