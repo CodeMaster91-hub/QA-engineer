@@ -117,3 +117,10 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 - **InMemoryQueue**: кастомная очередь в памяти для dev; BullMQ — для production (Redis обязателен)
 - **LLM_MOCK=true**: моковые ответы для разработки без реального LLM
 - **ioredis**: динамический импорт, не в package.json — Redis работает только если пакет установлен вручную
+
+## TMS / TestRail
+
+- **Auth**: Basic Auth с форматом `email:api_key` (НЕ `api:api_key`). Требуется `TESTRAIL_EMAIL` + `TESTRAIL_API_KEY`
+- **TmsService** доступен через `TmsModule` (импортировать вButtonModule)
+- **AdapterFactory** выбирает адаптер по `TMS_PROVIDER` env: `testrail` | `zephyr` | `testit` | `testlink`
+- **getTree()** возвращает `TmsNode[]` — плоский список с `type: 'suite' | 'section'`
