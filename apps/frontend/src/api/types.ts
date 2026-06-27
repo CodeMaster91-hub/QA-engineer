@@ -113,6 +113,7 @@ export interface DryRunArtifact {
 export interface TestStep {
   action: string;
   expected: string;
+  _uid?: string;
 }
 
 export interface TestCase {

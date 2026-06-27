@@ -2,6 +2,15 @@ import { ref, computed } from 'vue';
 import { api } from '@/api/client';
 import type { TestCase, TestStep, Artifact } from '@/api/types';
 
+let uidCounter = 0;
+function uid() {
+  return `step-${Date.now()}-${++uidCounter}`;
+}
+
+export interface StepWithUid extends TestStep {
+  _uid: string;
+}
+
 export function useTestCases(artifact: Artifact | null) {
   const cases = ref<TestCase[]>(artifact?.content?.cases || []);
   const selectedIndex = ref<number | null>(null);
@@ -25,6 +34,7 @@ export function useTestCases(artifact: Artifact | null) {
     cases.value = raw.map((c: any) => ({
       ...c,
       automation_candidate: c.automation_candidate ?? false,
+      steps: (c.steps || []).map((s: any) => ({ ...s, _uid: uid() })),
     }));
     takeSnapshot();
     selectedIndex.value = null;
@@ -46,7 +56,7 @@ export function useTestCases(artifact: Artifact | null) {
 
   function addStep() {
     if (!selectedCase.value) return;
-    selectedCase.value.steps.push({ action: '', expected: '' });
+    selectedCase.value.steps.push({ action: '', expected: '', _uid: uid() });
   }
 
   function removeStep(index: number) {

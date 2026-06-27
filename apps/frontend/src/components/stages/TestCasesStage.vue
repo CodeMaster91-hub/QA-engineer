@@ -136,42 +136,44 @@
               <button class="btn-add" @click="addStep">+ Добавить шаг</button>
             </div>
             <div v-if="selectedCase.steps.length" class="steps-list">
-              <div v-for="(step, sIdx) in selectedCase.steps" :key="sIdx" class="step-item">
-                <span class="step-num">{{ sIdx + 1 }}.</span>
-                <div class="step-fields">
-                  <input
-                    type="text"
-                    :value="step.action"
-                    placeholder="Действие"
-                    @input="updateStepField(sIdx, 'action', ($event.target as HTMLInputElement).value)"
-                  />
-                  <input
-                    type="text"
-                    :value="step.expected"
-                    placeholder="Ожидание"
-                    @input="updateStepField(sIdx, 'expected', ($event.target as HTMLInputElement).value)"
-                  />
+              <TransitionGroup name="step">
+                <div v-for="(step, sIdx) in selectedCase.steps" :key="step._uid" class="step-item">
+                  <span class="step-num">{{ sIdx + 1 }}.</span>
+                  <div class="step-fields">
+                    <input
+                      type="text"
+                      :value="step.action"
+                      placeholder="Действие"
+                      @input="updateStepField(sIdx, 'action', ($event.target as HTMLInputElement).value)"
+                    />
+                    <input
+                      type="text"
+                      :value="step.expected"
+                      placeholder="Ожидание"
+                      @input="updateStepField(sIdx, 'expected', ($event.target as HTMLInputElement).value)"
+                    />
+                  </div>
+                  <div class="step-actions">
+                    <button
+                      class="btn-icon"
+                      :disabled="sIdx === 0"
+                      @click="moveStepUp(sIdx)"
+                      title="Вверх"
+                    >↑</button>
+                    <button
+                      class="btn-icon"
+                      :disabled="sIdx === selectedCase.steps.length - 1"
+                      @click="moveStepDown(sIdx)"
+                      title="Вниз"
+                    >↓</button>
+                    <button
+                      class="btn-icon btn-icon-danger"
+                      @click="removeStep(sIdx)"
+                      title="Удалить"
+                    >✕</button>
+                  </div>
                 </div>
-                <div class="step-actions">
-                  <button
-                    class="btn-icon"
-                    :disabled="sIdx === 0"
-                    @click="moveStepUp(sIdx)"
-                    title="Вверх"
-                  >↑</button>
-                  <button
-                    class="btn-icon"
-                    :disabled="sIdx === selectedCase.steps.length - 1"
-                    @click="moveStepDown(sIdx)"
-                    title="Вниз"
-                  >↓</button>
-                  <button
-                    class="btn-icon btn-icon-danger"
-                    @click="removeStep(sIdx)"
-                    title="Удалить"
-                  >✕</button>
-                </div>
-              </div>
+              </TransitionGroup>
             </div>
             <div v-else class="empty-steps">Нет шагов</div>
           </div>
@@ -782,4 +784,26 @@ onUnmounted(() => {
 .badge-reviewed { background: #e3f2fd; color: #1565c0; }
 .badge-approved { background: #e8f5e9; color: #2da160; }
 .badge-needs_clarification { background: #fff3e0; color: #ef6c00; }
+
+/* Step reorder animation */
+.step-move,
+.step-enter-active,
+.step-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.step-enter-from {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.step-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.step-leave-active {
+  position: absolute;
+  width: 100%;
+}
 </style>
