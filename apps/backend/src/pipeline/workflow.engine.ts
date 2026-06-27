@@ -672,11 +672,9 @@ ${JSON.stringify(existingRequirements, null, 2)}
 Для каждого кейса укажи:
 - targetSectionId — ID существующей секции (если подходящая есть)
 - targetSectionName — название новой секции (если подходящей нет)
-- status — "approved" (для публикации) или "draft" (оставить как черновик)
 
 Если кейс можно отнести к существующей секции — сделай это.
 Если подходящей секции нет — предложи создать новую.
-Черновики (draft) не публикуются, но сохраняются как артефакты.
 
 Верни только JSON без markdown-обёртки:
 {
@@ -684,7 +682,6 @@ ${JSON.stringify(existingRequirements, null, 2)}
     {
       "id": "TC-001",
       "title": "...",
-      "status": "approved",
       "targetSectionId": "123",
       "targetSectionName": null
     }
@@ -720,7 +717,7 @@ ${JSON.stringify(existingRequirements, null, 2)}
 
     const mergedCases = cases.map((original: any) => {
       const llmResult = parsed.cases?.find((c: any) => c.id === original.id);
-      const status = llmResult?.status || 'draft';
+      const status = original.status || 'draft';
       return {
         ...original,
         status,

@@ -34,7 +34,7 @@ export class EventsController {
 
     // Keepalive каждые 30 секунд — предотвращает закрытие SSE прокси/браузером
     const keepalive$ = interval(30_000).pipe(
-      map(() => ({ type: 'keepalive', data: { timestamp: Date.now() } })),
+      map(() => ({ type: 'keepalive' as const, data: { timestamp: Date.now() }, timestamp: new Date() })),
     );
 
     // Replay сначала, потом live + keepalive параллельно
