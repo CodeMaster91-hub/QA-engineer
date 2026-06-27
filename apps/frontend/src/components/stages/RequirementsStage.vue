@@ -34,6 +34,12 @@
         <h3>Требования</h3>
       </div>
       <div class="panel-body">
+        <QuestionsPanel
+          v-if="questions.length"
+          :questions="questions"
+          @answer="$emit('answer')"
+        />
+
         <div v-if="requirements.length" class="requirements-table">
           <table>
             <thead>
@@ -55,12 +61,6 @@
           </table>
         </div>
         <div v-else class="empty">Нет требований</div>
-
-        <QuestionsPanel
-          v-if="questions.length"
-          :questions="questions"
-          @answer="$emit('answer')"
-        />
       </div>
     </div>
   </div>
