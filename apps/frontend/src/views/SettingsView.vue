@@ -33,6 +33,22 @@
     </div>
     
     <div class="section">
+      <h2>Интерфейс</h2>
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Показывать логи</span>
+            <span class="setting-hint">Отображать секцию логов на странице фичи</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" v-model="showLogs" @change="saveSetting('show_logs', showLogs)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <h2>TMS Provider</h2>
       <div class="provider-info">
         <p>Текущий провайдер: <strong>{{ tmsProvider }}</strong></p>
@@ -47,13 +63,25 @@ import { api } from '@/api/client'
 
 const configs = ref<any[]>([])
 const tmsProvider = ref('testrail')
+const showLogs = ref(true)
 
 const loadConfigs = async () => {
   try {
-    const response = await api.get('/agents/config')
+    const response = await api.get<any>('/agents/config')
     configs.value = response.data
   } catch (e) {
     console.error('Failed to load configs:', e)
+  }
+}
+
+const loadSettings = async () => {
+  try {
+    const settings = await api.get<Record<string, any>>('/users/settings')
+    if ('show_logs' in settings) {
+      showLogs.value = settings.show_logs
+    }
+  } catch (e) {
+    console.error('Failed to load settings:', e)
   }
 }
 
@@ -65,7 +93,18 @@ const saveConfig = async (config: any) => {
   }
 }
 
-onMounted(loadConfigs)
+const saveSetting = async (key: string, value: any) => {
+  try {
+    await api.patch(`/users/settings/${key}`, { value })
+  } catch (e) {
+    console.error('Failed to save setting:', e)
+  }
+}
+
+onMounted(() => {
+  loadConfigs()
+  loadSettings()
+})
 </script>
 
 <style scoped>
@@ -183,6 +222,35 @@ h1 {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.settings-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setting-label {
+  font-size: 0.95em;
+  color: #1a1a2e;
+}
+
+.setting-hint {
+  font-size: 0.8em;
+  color: #999;
 }
 
 .loading {
