@@ -28,10 +28,20 @@
         <div class="split-container" ref="containerRef">
           <div class="split-panel cases-panel" :style="{ width: leftWidth + 'px' }">
             <div class="panel-header">
-              <h3>Тест-кейсы ({{ cases.length }})</h3>
+              <h3>Тест-кейсы
+                <template v-if="selectedSectionId">
+                  <span class="filter-badge" @click.stop="selectedSectionId = null; selectedSectionName = ''">
+                    {{ selectedSectionName }} <span class="filter-clear">✕</span>
+                  </span>
+                </template>
+                <span class="case-count">({{ filteredCases.length }})</span>
+              </h3>
             </div>
             <div class="panel-body">
-              <div class="cases-table">
+              <div v-if="filteredCases.length === 0 && selectedSectionId" class="empty-filter">
+                Нет кейсов в секции «{{ selectedSectionName }}»
+              </div>
+              <div v-else class="cases-table">
                 <table>
                   <thead>
                     <tr>
@@ -42,7 +52,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="tc in cases" :key="tc.id">
+                    <tr v-for="tc in filteredCases" :key="tc.id">
                       <td class="tc-id">{{ tc.id }}</td>
                       <td>{{ tc.title }}</td>
                       <td>
@@ -82,12 +92,13 @@
             </div>
             <div class="panel-body">
               <div v-if="visibleTree.length" class="section-group">
-                <div
-                  v-for="item in visibleTree"
-                  :key="item.id"
-                  class="tree-node"
-                  @click="toggleNode(item.id)"
-                >
+                  <div
+                    v-for="item in visibleTree"
+                    :key="item.id"
+                    class="tree-node"
+                    :class="{ 'tree-node-selected': selectedSectionId === item.id }"
+                    @click="toggleNode(item.id)"
+                  >
                   <span class="tree-guides">{{ item.guides }}</span>
                   <span class="tree-toggle" v-if="item.hasChildren">
                     {{ expandedState[item.id] === false ? '▶' : '▼' }}
@@ -145,10 +156,54 @@ const getCasesForSection = (sectionId: string) => {
   return cases.value.filter((c) => c.targetSectionId === sectionId)
 }
 
+const childMap = computed(() => {
+  const existing = existingSections.value.map((s) => ({ ...s, isNew: false as const }))
+  const news = newSections.value.map((s) => ({ ...s, isNew: true as const }))
+  const all = [...existing, ...news]
+  const map = new Map<string, typeof all[0][]>()
+  for (const sec of all) {
+    const key = sec.parentId || '__root__'
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(sec)
+  }
+  return map
+})
+
+const allDescendantIds = (sectionId: string): string[] => {
+  const ids: string[] = [sectionId]
+  const children = childMap.value.get(sectionId) || []
+  for (const child of children) {
+    ids.push(...allDescendantIds(child.id))
+  }
+  return ids
+}
+
+const filteredCases = computed(() => {
+  if (!selectedSectionId.value) return cases.value
+  const ids = allDescendantIds(selectedSectionId.value)
+  return cases.value.filter((c) => c.targetSectionId && ids.includes(c.targetSectionId))
+})
+
 const expandedState = ref<Record<string, boolean>>({})
+const selectedSectionId = ref<string | null>(null)
+const selectedSectionName = ref<string>('')
 
 const toggleNode = (id: string) => {
-  expandedState.value = { ...expandedState.value, [id]: expandedState.value[id] === false ? true : false }
+  if (selectedSectionId.value === id) {
+    selectedSectionId.value = null
+    selectedSectionName.value = ''
+  } else {
+    selectedSectionId.value = id
+    selectedSectionName.value = getSectionName(id)
+  }
+  const sec = allSections.value.find((s) => s.id === id)
+  if (sec) {
+    const children = childMap.value.get(id)
+    if (children && children.length > 0) {
+      const prev = expandedState.value[id]
+      expandedState.value = { ...expandedState.value, [id]: prev === false ? true : false }
+    }
+  }
 }
 
 const visibleTree = computed(() => {
@@ -157,14 +212,8 @@ const visibleTree = computed(() => {
   const all = [...existing, ...news]
   if (!all.length) return []
 
-  const childMap = new Map<string, typeof all[0][]>()
-  for (const sec of all) {
-    const key = sec.parentId || '__root__'
-    if (!childMap.has(key)) childMap.set(key, [])
-    childMap.get(key)!.push(sec)
-  }
-
-  const hasChildren = (id: string) => childMap.has(id) && childMap.get(id)!.length > 0
+  const cm = childMap.value
+  const hasChildren = (id: string) => cm.has(id) && cm.get(id)!.length > 0
   const isExpanded = (id: string) => expandedState.value[id] !== false
 
   type TreeNode = {
@@ -175,7 +224,7 @@ const visibleTree = computed(() => {
   const stack: boolean[] = []
 
   const walk = (parentKey: string, depth: number) => {
-    const children = childMap.get(parentKey) || []
+    const children = cm.get(parentKey) || []
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       const isLast = i === children.length - 1
@@ -380,6 +429,8 @@ onUnmounted(() => {
   margin: 0;
   color: #1a1a2e;
   font-size: 1.1em;
+  display: flex;
+  align-items: center;
 }
 
 .split-panel > .panel-body {
@@ -546,6 +597,55 @@ th {
   font-size: 0.78em;
   color: #666;
   flex-shrink: 0;
+}
+
+.tree-node-selected {
+  background: #e8f0fe;
+  outline: 1px solid #1068bf44;
+}
+
+.tree-node-selected:hover {
+  background: #dce8fa;
+}
+
+.empty-filter {
+  color: #999;
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 0.9em;
+}
+
+.case-count {
+  font-weight: 400;
+  color: #666;
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e8f0fe;
+  color: #1068bf;
+  font-weight: 500;
+  font-size: 0.8em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  vertical-align: middle;
+}
+
+.filter-badge:hover {
+  background: #d0e2fc;
+}
+
+.filter-clear {
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .empty {
