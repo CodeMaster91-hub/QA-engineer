@@ -389,8 +389,8 @@ ${JSON.stringify(existingRequirements, null, 2)}
           .filter((node) => node.type === 'section')
           .map((node) => ({ id: node.id, name: node.name, parentId: node.parentId || null }));
       }
-    } catch {
-      this.logger.warn('Не удалось загрузить секции TMS для createTestCases');
+    } catch (error) {
+      this.logger.warn(`Не удалось загрузить секции TMS для createTestCases: ${error.message}`);
     }
 
     const response = await this.llmService.complete(
