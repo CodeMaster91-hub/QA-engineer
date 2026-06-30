@@ -407,6 +407,12 @@ export class PipelineService {
       await this.pipelineRepository.save(pipeline);
 
       await this.eventsService.emit(pipeline.featureId, {
+        type: 'pipeline:stage-update',
+        data: { stage, status: StageStatus.Blocked },
+        timestamp: new Date(),
+      });
+
+      await this.eventsService.emit(pipeline.featureId, {
         type: 'pipeline:blocked',
         data: { stage, questions: result.questions },
         timestamp: new Date(),

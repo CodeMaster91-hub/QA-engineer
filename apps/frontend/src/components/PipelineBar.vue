@@ -97,6 +97,7 @@ const statusClass = (status: string) => {
     'status-canceled': status === 'canceled',
     'status-blocked': status === 'blocked',
     'status-queued': status === 'queued',
+    'status-paused': status === 'paused',
   }
 }
 

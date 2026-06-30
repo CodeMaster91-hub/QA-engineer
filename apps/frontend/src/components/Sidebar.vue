@@ -446,7 +446,8 @@ const subscribeToSSE = (featureId: string, slug: string) => {
           const ts = parseInt(raw.id.split('-')[0], 10)
           if (!isNaN(ts) && ts > conn.lastEventTimestamp) conn.lastEventTimestamp = ts
         }
-        if (raw.type === 'pipeline:stage-update' || raw.type === 'pipeline:completed' || raw.type === 'pipeline:failed') {
+        if (raw.type === 'pipeline:stage-update' || raw.type === 'pipeline:completed' || raw.type === 'pipeline:failed'
+            || raw.type === 'pipeline:blocked' || raw.type === 'pipeline:waiting_for_qa') {
           loadPipeline(slug)
         }
         conn.retryDelay = 1000
@@ -490,7 +491,7 @@ onMounted(async () => {
   pollInterval = setInterval(async () => {
     for (const feature of features.value) {
       const status = pipelineMap.value[feature.slug]?.status
-      if (status === 'running') await loadPipeline(feature.slug)
+      if (['running', 'blocked', 'waiting_for_qa'].includes(status)) await loadPipeline(feature.slug)
     }
   }, 10000)
 })
