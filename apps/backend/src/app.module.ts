@@ -1,8 +1,18 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+function findEnvFile(): string | undefined {
+  const candidates = [
+    join(__dirname, '../../../.env'),
+    join(__dirname, '../../.env'),
+    join(__dirname, '../.env'),
+    join(__dirname, '.env'),
+  ];
+  return candidates.find((p) => existsSync(p));
+}
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { FeaturesModule } from './features/features.module';
@@ -20,7 +30,7 @@ import { QueueModule } from './common/queue/queue.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '../.env', '../../.env', '../../../.env'],
+      envFilePath: findEnvFile(),
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
