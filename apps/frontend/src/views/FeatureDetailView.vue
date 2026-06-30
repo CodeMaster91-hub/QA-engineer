@@ -230,8 +230,8 @@ const pipelineStages = computed(() => {
       }
     }
 
-    // If pipeline itself is failed, show failed status for all processed stages
-    if (pipeline.value!.status === 'failed' && result) {
+    // Only the stage that actually failed shows failed, not all stages
+    if (pipeline.value!.status === 'failed' && result?.status === 'failed') {
       status = 'failed'
     }
 
