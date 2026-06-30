@@ -87,7 +87,7 @@
                   class="section-item"
                   :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
                 >
-                  <span class="folder-icon">{{ sec.childrenCount > 0 ? '📂' : '📄' }}</span>
+                  <span class="folder-icon">📂</span>
                   <span>{{ sec.name }}</span>
                   <span class="section-count">{{ sec.caseCount }}</span>
                 </div>
@@ -101,7 +101,7 @@
                   class="section-item"
                   :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
                 >
-                  <span class="folder-icon">{{ sec.childrenCount > 0 ? '📂' : '📄' }}</span>
+                  <span class="folder-icon">📂</span>
                   <span class="section-new-label">{{ sec.name }}</span>
                   <span class="section-count">{{ sec.caseCount }}</span>
                 </div>
@@ -153,13 +153,6 @@ const sectionTree = computed(() => {
     childMap.get(key)!.push(sec)
   }
 
-  const childCountMap = new Map<string, number>()
-  for (const sec of flat) {
-    if (sec.parentId) {
-      childCountMap.set(sec.parentId, (childCountMap.get(sec.parentId) || 0) + 1)
-    }
-  }
-
   const depthMap = new Map<string, number>()
   const getDepth = (id: string): number => {
     if (depthMap.has(id)) return depthMap.get(id)!
@@ -170,7 +163,7 @@ const sectionTree = computed(() => {
     return d
   }
 
-  const ordered: Array<{ id: string; name: string; depth: number; childrenCount: number; caseCount: number }> = []
+  const ordered: Array<{ id: string; name: string; depth: number; caseCount: number }> = []
   const walk = (parentId: string | null) => {
     const children = childMap.get(parentId || '__root__') || []
     for (const sec of children) {
@@ -178,7 +171,6 @@ const sectionTree = computed(() => {
         id: sec.id,
         name: sec.name,
         depth: getDepth(sec.id),
-        childrenCount: childCountMap.get(sec.id) || 0,
         caseCount: getCasesForSection(sec.id).length,
       })
       walk(sec.id)
@@ -194,7 +186,6 @@ const newSectionsFlat = computed(() => {
     id: `__new__${idx}`,
     name: sec.name,
     depth: sec.parentSectionId && existingIds.has(sec.parentSectionId) ? 1 : 0,
-    childrenCount: 0,
     caseCount: getCasesForNewSection(sec.name).length,
   }))
 })
