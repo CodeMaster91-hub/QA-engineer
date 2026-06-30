@@ -34,6 +34,12 @@ export class FeaturesService {
     return { data: result, total };
   }
 
+  async findById(id: string): Promise<Feature> {
+    const feature = await this.featuresRepository.findOne({ where: { id } });
+    if (!feature) throw new NotFoundException(`Feature with id ${id} not found`);
+    return feature;
+  }
+
   async findBySlug(slug: string): Promise<Feature & { reqCount: number; caseCount: number }> {
     const feature = await this.featuresRepository.findOne({
       where: { slug },
