@@ -4,4 +4,5 @@ export enum StageStatus {
   Success = 'success',
   Failed = 'failed',
   Canceled = 'canceled',
+  WaitingForQA = 'waiting_for_qa',
 }

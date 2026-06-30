@@ -81,18 +81,22 @@
               <h3>Секции TestRail</h3>
             </div>
             <div class="panel-body">
-              <div v-if="unifiedTree.length" class="section-group">
+              <div v-if="visibleTree.length" class="section-group">
                 <div
-                  v-for="sec in unifiedTree"
-                  :key="sec.id"
-                  class="section-item"
-                  :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
+                  v-for="item in visibleTree"
+                  :key="item.id"
+                  class="tree-node"
+                  @click="toggleNode(item.id)"
                 >
-                  <span class="folder-icon">📂</span>
-                  <span :class="{ 'section-new-label': sec.isNew }">
-                    {{ sec.isNew ? '[Новая] ' + sec.name : sec.name }}
+                  <span class="tree-guides">{{ item.guides }}</span>
+                  <span class="tree-toggle" v-if="item.hasChildren">
+                    {{ expandedState[item.id] === false ? '▶' : '▼' }}
                   </span>
-                  <span class="section-count">{{ sec.caseCount }}</span>
+                  <span class="folder-icon" v-else>📂</span>
+                  <span :class="{ 'section-new-label': item.isNew }">
+                    {{ item.isNew ? '[Новая] ' + item.name : item.name }}
+                  </span>
+                  <span class="section-count">{{ item.caseCount }}</span>
                 </div>
               </div>
             </div>
@@ -141,46 +145,68 @@ const getCasesForSection = (sectionId: string) => {
   return cases.value.filter((c) => c.targetSectionId === sectionId)
 }
 
-const unifiedTree = computed(() => {
+const expandedState = ref<Record<string, boolean>>({})
+
+const toggleNode = (id: string) => {
+  expandedState.value = { ...expandedState.value, [id]: expandedState.value[id] === false ? true : false }
+}
+
+const visibleTree = computed(() => {
   const existing = existingSections.value.map((s) => ({ ...s, isNew: false as const }))
   const news = newSections.value.map((s) => ({ ...s, isNew: true as const }))
   const all = [...existing, ...news]
   if (!all.length) return []
 
-  const childMap = new Map<string | null, typeof all[0][]>()
+  const childMap = new Map<string, typeof all[0][]>()
   for (const sec of all) {
     const key = sec.parentId || '__root__'
     if (!childMap.has(key)) childMap.set(key, [])
     childMap.get(key)!.push(sec)
   }
 
-  const depthMap = new Map<string, number>()
-  const getDepth = (id: string): number => {
-    if (depthMap.has(id)) return depthMap.get(id)!
-    const sec = all.find((s) => s.id === id)
-    if (!sec || !sec.parentId) { depthMap.set(id, 0); return 0 }
-    const d = getDepth(sec.parentId) + 1
-    depthMap.set(id, d)
-    return d
-  }
+  const hasChildren = (id: string) => childMap.has(id) && childMap.get(id)!.length > 0
+  const isExpanded = (id: string) => expandedState.value[id] !== false
 
-  type Item = { id: string; name: string; depth: number; caseCount: number; isNew: boolean }
-  const ordered: Item[] = []
-  const walk = (parentId: string | null) => {
-    const children = childMap.get(parentId || '__root__') || []
-    for (const sec of children) {
-      ordered.push({
-        id: sec.id,
-        name: sec.name,
-        depth: getDepth(sec.id),
-        caseCount: getCasesForSection(sec.id).length,
-        isNew: sec.isNew,
+  type TreeNode = {
+    id: string; name: string; depth: number; caseCount: number
+    isNew: boolean; hasChildren: boolean; guides: string
+  }
+  const result: TreeNode[] = []
+  const stack: boolean[] = []
+
+  const walk = (parentKey: string, depth: number) => {
+    const children = childMap.get(parentKey) || []
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      const isLast = i === children.length - 1
+      const hc = hasChildren(child.id)
+      const exp = isExpanded(child.id)
+
+      let guides = ''
+      for (let d = 0; d < depth; d++) {
+        guides += stack[d] ? '   ' : '│  '
+      }
+      guides += isLast ? '└──' : '├──'
+
+      result.push({
+        id: child.id,
+        name: child.name,
+        depth,
+        caseCount: getCasesForSection(child.id).length,
+        isNew: child.isNew,
+        hasChildren: hc,
+        guides,
       })
-      walk(sec.id)
+
+      if (hc && exp) {
+        stack.push(isLast)
+        walk(child.id, depth + 1)
+        stack.pop()
+      }
     }
   }
-  walk(null)
-  return ordered
+  walk('__root__', 0)
+  return result
 })
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -459,26 +485,52 @@ th {
   margin-bottom: 16px;
 }
 
-.section-group-label {
-  font-size: 0.8em;
-  font-weight: 600;
-  color: #999;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.section-item {
+.tree-node {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 0;
+  gap: 4px;
+  padding: 4px 0;
   font-size: 0.9em;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s;
+  user-select: none;
+}
+
+.tree-node:hover {
+  background: #f4f6f9;
+}
+
+.tree-guides {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: #c0c4cc;
+  white-space: pre;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tree-toggle {
+  flex-shrink: 0;
+  font-size: 0.7em;
+  color: #888;
+  width: 16px;
+  text-align: center;
+  transition: color 0.15s;
+  line-height: 1;
+}
+
+.tree-node:hover .tree-toggle {
+  color: #1068bf;
 }
 
 .folder-icon {
   flex-shrink: 0;
-  font-size: 0.95em;
+  font-size: 0.85em;
   line-height: 1;
+  width: 16px;
+  text-align: center;
 }
 
 .section-new-label {
@@ -491,8 +543,9 @@ th {
   background: #f0f0f0;
   border-radius: 10px;
   padding: 1px 8px;
-  font-size: 0.8em;
+  font-size: 0.78em;
   color: #666;
+  flex-shrink: 0;
 }
 
 .empty {

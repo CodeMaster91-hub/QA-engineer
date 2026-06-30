@@ -307,10 +307,12 @@ const loadFeature = async () => {
   feature.value = data
 }
 
-const loadPipeline = async () => {
+const loadPipeline = async (version?: number) => {
   try {
     const data = await api.get<Pipeline>(`/pipeline/${featureSlug.value}/status`)
-    pipeline.value = data
+    if (version === undefined || version === pipelineRequestCounter) {
+      pipeline.value = data
+    }
   } catch (e: any) {
     if (e.message?.includes('404')) {
       pipeline.value = null
@@ -469,7 +471,7 @@ const stopPolling = () => {
 
 const refreshPipeline = () => {
   const current = ++pipelineRequestCounter
-  loadPipeline().then(async () => {
+  loadPipeline(current).then(async () => {
     if (current === pipelineRequestCounter) {
       await loadArtifacts()
     }
@@ -544,11 +546,11 @@ const initSSE = () => {
     handleSseMessage('unknown', e.data)
   }
 
+  const currentEs = eventSource
   eventSource.onerror = () => {
-    eventSource?.close()
-    eventSource = null
+    currentEs.close()
     setTimeout(() => {
-      if (feature.value?.id) {
+      if (feature.value?.id && eventSource === currentEs) {
         initSSE()
       }
     }, 3000)

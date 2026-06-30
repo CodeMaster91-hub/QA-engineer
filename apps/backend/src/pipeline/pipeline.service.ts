@@ -421,6 +421,12 @@ export class PipelineService {
       await this.pipelineRepository.save(pipeline);
 
       await this.eventsService.emit(pipeline.featureId, {
+        type: 'pipeline:stage-update',
+        data: { stage, status: StageStatus.WaitingForQA },
+        timestamp: new Date(),
+      });
+
+      await this.eventsService.emit(pipeline.featureId, {
         type: 'pipeline:waiting_for_qa',
         data: { stage, coverageGaps: result.coverageGaps },
         timestamp: new Date(),

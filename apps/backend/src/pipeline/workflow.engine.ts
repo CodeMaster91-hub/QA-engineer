@@ -379,6 +379,19 @@ ${JSON.stringify(existingRequirements, null, 2)}
       };
     }
 
+    let existingSections: { id: string; name: string; parentId: string | null }[] = [];
+    try {
+      const projectId = this.configService.get<string>('TESTRAIL_PROJECT_ID');
+      if (projectId) {
+        const tree = await this.tmsService.getTree(projectId);
+        existingSections = tree
+          .filter((node) => node.type === 'section')
+          .map((node) => ({ id: node.id, name: node.name, parentId: node.parentId || null }));
+      }
+    } catch {
+      this.logger.warn('Не удалось загрузить секции TMS для createTestCases');
+    }
+
     const response = await this.llmService.complete(
       PipelineStage.TEST_CASES_CREATED,
       [
@@ -387,9 +400,12 @@ ${JSON.stringify(existingRequirements, null, 2)}
           content: `Ты агент Test Case Designer.
 На основе требований создай тест-кейсы.
 
-На вход подаётся сводка требований (requirements).
+На вход подаётся сводка требований (requirements) и список существующих секций (existingSections) в TMS.
 
 ВАЖНО: Если в требованиях есть неясности — добавь их в поле needs_clarification в каждом кейсе, но НЕ блокируй генерацию.
+
+Для каждого тест-кейса указывай в поле "section" название подходящей существующей секции из existingSections.
+Если ни одна существующая секция не подходит — предложи новое название.
 
 Верни только JSON без markdown-обёртки:
 {
@@ -416,7 +432,10 @@ ${JSON.stringify(existingRequirements, null, 2)}
         },
         {
           role: 'user',
-          content: JSON.stringify(requirementsArtifact?.content || {}),
+          content: JSON.stringify({
+            requirements: requirementsArtifact?.content || {},
+            existingSections,
+          }),
         },
       ],
     );
@@ -866,6 +885,19 @@ ${JSON.stringify(existingRequirements, null, 2)}
     const existingCases = testcasesArtifact.content.cases;
     const maxExistingId = this.extractMaxCaseId(existingCases);
 
+    let existingSections: { id: string; name: string; parentId: string | null }[] = [];
+    try {
+      const projectId = this.configService.get<string>('TESTRAIL_PROJECT_ID');
+      if (projectId) {
+        const tree = await this.tmsService.getTree(projectId);
+        existingSections = tree
+          .filter((node) => node.type === 'section')
+          .map((node) => ({ id: node.id, name: node.name, parentId: node.parentId || null }));
+      }
+    } catch {
+      this.logger.warn('Не удалось загрузить секции TMS для fillGaps');
+    }
+
     const response = await this.llmService.complete(
       PipelineStage.TEST_CASES_CREATED,
       [
@@ -874,9 +906,12 @@ ${JSON.stringify(existingRequirements, null, 2)}
            content: `Ты агент Test Case Designer.
  Аудит покрытия выявил пробелы — нужны дополнительные тест-кейсы.
 
- ВНИМАНИЕ: ниже передан ПОЛНЫЙ список существующих тест-кейсов.
+ ВНИМАНИЕ: ниже передан ПОЛНЫЙ список существующих тест-кейсов и список существующих секций (existingSections) в TMS.
  Проверь каждый gap — возможно, он уже покрыт существующим кейсом.
  Создавай новый кейс ТОЛЬКО если существующие не закрывают gap.
+
+ Для каждого тест-кейса указывай в поле "section" название подходящей существующей секции из existingSections.
+ Если ни одна существующая секция не подходит — предложи новое название.
 
  ГРУППИРОВКА:
  Объединяй позитивные и негативные кейсы с похожими шагами или одним уровнем проверки.
@@ -908,6 +943,7 @@ ${JSON.stringify(existingRequirements, null, 2)}
             requirements: requirementsArtifact.content,
             gaps,
             existingCases,
+            existingSections,
           }),
         },
       ],
