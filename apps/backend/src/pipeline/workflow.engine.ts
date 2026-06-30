@@ -444,7 +444,23 @@ ${JSON.stringify(existingRequirements, null, 2)}
     try {
       parsed = this.parseJsonResponse(response.content);
     } catch {
-      parsed = { cases: [] };
+      this.logger.error('LLM returned invalid JSON for test_cases_created');
+      return {
+        stage: PipelineStage.TEST_CASES_CREATED,
+        status: 'failed',
+        error: 'LLM вернул невалидный JSON. Этап будет перезапущен.',
+        timestamp: new Date(),
+      };
+    }
+
+    if (!parsed.cases?.length) {
+      this.logger.error('LLM returned empty cases for test_cases_created');
+      return {
+        stage: PipelineStage.TEST_CASES_CREATED,
+        status: 'failed',
+        error: 'LLM не сгенерировал тест-кейсы. Этап будет перезапущен.',
+        timestamp: new Date(),
+      };
     }
 
     await this.featuresService.upsertArtifact(
