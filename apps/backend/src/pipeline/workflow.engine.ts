@@ -14,6 +14,7 @@ export interface StageResult {
   status: 'completed' | 'failed' | 'blocked' | 'waiting_for_qa';
   output?: any;
   error?: string;
+  fatal?: boolean;
   questions?: Array<{ question: string; reason: string; severity: string }>;
   coverageGaps?: string[];
   timestamp: Date;
@@ -458,7 +459,8 @@ ${JSON.stringify(existingRequirements, null, 2)}
       return {
         stage: PipelineStage.TEST_CASES_CREATED,
         status: 'failed',
-        error: 'LLM не сгенерировал тест-кейсы. Этап будет перезапущен.',
+        fatal: true,
+        error: 'LLM не сгенерировал тест-кейсы.',
         timestamp: new Date(),
       };
     }

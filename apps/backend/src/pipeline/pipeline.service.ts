@@ -452,8 +452,7 @@ export class PipelineService {
 
       this.logger.log(`Pipeline waiting for QA at ${stage}`);
     } else if (result.status === 'failed') {
-      pipeline.retryCount++;
-      if (pipeline.retryCount >= pipeline.maxRetries) {
+      if (result.fatal) {
         pipeline.status = PipelineStatus.FAILED;
         pipeline.error = result.error || '';
         await this.pipelineRepository.save(pipeline);
@@ -462,17 +461,30 @@ export class PipelineService {
           data: { stage, error: result.error },
           timestamp: new Date(),
         });
-        this.logger.error(
-          `Pipeline failed after ${pipeline.maxRetries} retries`,
-        );
+        this.logger.error(`Pipeline failed (fatal): ${result.error}`);
       } else {
-        await this.pipelineRepository.save(pipeline);
-        await this.pipelineQueue.add({
-          pipelineId: pipeline.id,
-          featureId: pipeline.featureId,
-          featureSlug,
-          stage,
-        });
+        pipeline.retryCount++;
+        if (pipeline.retryCount >= pipeline.maxRetries) {
+          pipeline.status = PipelineStatus.FAILED;
+          pipeline.error = result.error || '';
+          await this.pipelineRepository.save(pipeline);
+          await this.eventsService.emit(pipeline.featureId, {
+            type: 'pipeline:failed',
+            data: { stage, error: result.error },
+            timestamp: new Date(),
+          });
+          this.logger.error(
+            `Pipeline failed after ${pipeline.maxRetries} retries`,
+          );
+        } else {
+          await this.pipelineRepository.save(pipeline);
+          await this.pipelineQueue.add({
+            pipelineId: pipeline.id,
+            featureId: pipeline.featureId,
+            featureSlug,
+            stage,
+          });
+        }
       }
     }
   }
