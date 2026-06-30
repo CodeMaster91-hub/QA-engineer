@@ -82,6 +82,7 @@ export interface DryRunCase {
   status: 'approved' | 'draft';
   targetSectionId: string | null;
   targetSectionName: string | null;
+  targetSectionPath?: string[];
   published: boolean;
 }
 
@@ -91,15 +92,10 @@ export interface DryRunSection {
   parentId: string | null;
 }
 
-export interface DryRunNewSection {
-  name: string;
-  parentSectionId: string | null;
-}
-
 export interface DryRunArtifact {
   sections: {
     existing: DryRunSection[];
-    new: DryRunNewSection[];
+    new: DryRunSection[];
   };
   cases: DryRunCase[];
   summary: {

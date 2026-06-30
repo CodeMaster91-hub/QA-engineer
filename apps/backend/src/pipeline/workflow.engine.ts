@@ -669,12 +669,12 @@ ${JSON.stringify(existingRequirements, null, 2)}
           content: `Ты QA-инженер. Проанализируй тест-кейсы и существующие секции TestRail.
 Распредели каждый тест-кейс по подходящей секции.
 
-Для каждого кейса укажи:
+Для каждого кейса укажи ОДНО из двух:
 - targetSectionId — ID существующей секции (если подходящая есть)
-- targetSectionName — название новой секции (если подходящей нет)
+- targetSectionPath — массив названий от корня до целевой секции (если нужно создать новую секцию или вложенную иерархию). Например: ["Feature X", "Auth", "Login"]
 
-Если кейс можно отнести к существующей секции — сделай это.
-Если подходящей секции нет — предложи создать новую.
+Секции могут быть вложенными. Если тест-кейс относится к новой функциональности — предложи иерархию секций.
+Если это доработка существующей фичи — найди родительскую секцию среди существующих и создай внутри неё.
 
 Верни только JSON без markdown-обёртки:
 {
@@ -682,12 +682,13 @@ ${JSON.stringify(existingRequirements, null, 2)}
     {
       "id": "TC-001",
       "title": "...",
-      "targetSectionId": "123",
-      "targetSectionName": null
+      "targetSectionId": "123"
+    },
+    {
+      "id": "TC-002",
+      "title": "...",
+      "targetSectionPath": ["Feature X", "Auth", "Login"]
     }
-  ],
-  "newSections": [
-    { "name": "Название новой секции", "parentSectionId": null }
   ]
 }`,
         },
@@ -712,24 +713,60 @@ ${JSON.stringify(existingRequirements, null, 2)}
     try {
       parsed = this.parseJsonResponse(response.content);
     } catch {
-      parsed = { cases: [], newSections: [] };
+      parsed = { cases: [] };
     }
+
+    // Собираем все targetSectionPath → строим дерево новых секций с virtual ID
+    const newSectionMap = new Map<string, { name: string; parentId: string | null }>();
+    const allPaths = new Set<string>();
+
+    for (const c of (parsed.cases || [])) {
+      if (c.targetSectionPath?.length) {
+        const pathKey = JSON.stringify(c.targetSectionPath);
+        if (allPaths.has(pathKey)) continue;
+        allPaths.add(pathKey);
+        for (let i = 0; i < c.targetSectionPath.length; i++) {
+          const segId = `__new__/${c.targetSectionPath.slice(0, i + 1).join('/')}`;
+          if (!newSectionMap.has(segId)) {
+            const parentId = i > 0
+              ? `__new__/${c.targetSectionPath.slice(0, i).join('/')}`
+              : null;
+            newSectionMap.set(segId, { name: c.targetSectionPath[i], parentId });
+          }
+        }
+      }
+    }
+
+    const newSections = Array.from(newSectionMap.entries()).map(([id, data]) => ({
+      id,
+      name: data.name,
+      parentId: data.parentId,
+    }));
 
     const mergedCases = cases.map((original: any) => {
       const llmResult = parsed.cases?.find((c: any) => c.id === original.id);
-      const status = original.status || 'draft';
+      let targetSectionId = llmResult?.targetSectionId || null;
+      let targetSectionName = null;
+
+      if (llmResult?.targetSectionPath?.length) {
+        targetSectionId = `__new__/${llmResult.targetSectionPath.join('/')}`;
+        targetSectionName = llmResult.targetSectionPath[llmResult.targetSectionPath.length - 1];
+      } else if (llmResult?.targetSectionId) {
+        const existing = existingSections.find(s => s.id === llmResult.targetSectionId);
+        targetSectionName = existing?.name || null;
+      }
+
       return {
         ...original,
-        status,
-        targetSectionId: llmResult?.targetSectionId || null,
-        targetSectionName: llmResult?.targetSectionName || null,
+        status: original.status || 'draft',
+        targetSectionId,
+        targetSectionName,
         published: false,
       };
     });
 
     const approvedCount = mergedCases.filter((c: any) => c.status === 'approved').length;
     const draftCount = mergedCases.filter((c: any) => c.status === 'draft').length;
-    const newSections = parsed.newSections || [];
 
     const dryRunArtifact = {
       sections: {

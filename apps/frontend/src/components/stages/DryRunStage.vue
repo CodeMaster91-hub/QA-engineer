@@ -46,12 +46,14 @@
                       <td class="tc-id">{{ tc.id }}</td>
                       <td>{{ tc.title }}</td>
                       <td>
-                        <span v-if="tc.targetSectionId" class="section-existing">
-                          {{ getSectionName(tc.targetSectionId) }}
-                        </span>
-                        <span v-else-if="tc.targetSectionName" class="section-new">
-                          [Новая] {{ tc.targetSectionName }}
-                        </span>
+                        <template v-if="tc.targetSectionId">
+                          <span v-if="tc.targetSectionId.startsWith('__new__/')" class="section-new">
+                            [Новая] {{ getSectionName(tc.targetSectionId) }}
+                          </span>
+                          <span v-else class="section-existing">
+                            {{ getSectionName(tc.targetSectionId) }}
+                          </span>
+                        </template>
                         <span v-else class="section-unassigned">—</span>
                       </td>
                       <td>
@@ -79,30 +81,17 @@
               <h3>Секции TestRail</h3>
             </div>
             <div class="panel-body">
-              <div v-if="sectionTree.length" class="section-group">
-                <div class="section-group-label">Существующие</div>
+              <div v-if="unifiedTree.length" class="section-group">
                 <div
-                  v-for="sec in sectionTree"
+                  v-for="sec in unifiedTree"
                   :key="sec.id"
                   class="section-item"
                   :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
                 >
                   <span class="folder-icon">📂</span>
-                  <span>{{ sec.name }}</span>
-                  <span class="section-count">{{ sec.caseCount }}</span>
-                </div>
-              </div>
-
-              <div v-if="newSections.length" class="section-group">
-                <div class="section-group-label">Новые (к созданию)</div>
-                <div
-                  v-for="(sec, idx) in newSectionsFlat"
-                  :key="idx"
-                  class="section-item"
-                  :style="{ paddingLeft: 12 + sec.depth * 20 + 'px' }"
-                >
-                  <span class="folder-icon">📂</span>
-                  <span class="section-new-label">{{ sec.name }}</span>
+                  <span :class="{ 'section-new-label': sec.isNew }">
+                    {{ sec.isNew ? '[Новая] ' + sec.name : sec.name }}
+                  </span>
                   <span class="section-count">{{ sec.caseCount }}</span>
                 </div>
               </div>
@@ -142,12 +131,24 @@ const existingSections = computed(() => dryRunData.value?.sections?.existing || 
 
 const newSections = computed(() => dryRunData.value?.sections?.new || [])
 
-const sectionTree = computed(() => {
-  const flat = existingSections.value
-  if (!flat.length) return []
+const allSections = computed(() => [...existingSections.value, ...newSections.value])
 
-  const childMap = new Map<string | null, typeof flat>()
-  for (const sec of flat) {
+const getSectionName = (sectionId: string): string => {
+  return allSections.value.find((s) => s.id === sectionId)?.name || `#${sectionId}`
+}
+
+const getCasesForSection = (sectionId: string) => {
+  return cases.value.filter((c) => c.targetSectionId === sectionId)
+}
+
+const unifiedTree = computed(() => {
+  const existing = existingSections.value.map((s) => ({ ...s, isNew: false as const }))
+  const news = newSections.value.map((s) => ({ ...s, isNew: true as const }))
+  const all = [...existing, ...news]
+  if (!all.length) return []
+
+  const childMap = new Map<string | null, typeof all[0][]>()
+  for (const sec of all) {
     const key = sec.parentId || '__root__'
     if (!childMap.has(key)) childMap.set(key, [])
     childMap.get(key)!.push(sec)
@@ -156,14 +157,15 @@ const sectionTree = computed(() => {
   const depthMap = new Map<string, number>()
   const getDepth = (id: string): number => {
     if (depthMap.has(id)) return depthMap.get(id)!
-    const sec = flat.find(s => s.id === id)
+    const sec = all.find((s) => s.id === id)
     if (!sec || !sec.parentId) { depthMap.set(id, 0); return 0 }
     const d = getDepth(sec.parentId) + 1
     depthMap.set(id, d)
     return d
   }
 
-  const ordered: Array<{ id: string; name: string; depth: number; caseCount: number }> = []
+  type Item = { id: string; name: string; depth: number; caseCount: number; isNew: boolean }
+  const ordered: Item[] = []
   const walk = (parentId: string | null) => {
     const children = childMap.get(parentId || '__root__') || []
     for (const sec of children) {
@@ -172,6 +174,7 @@ const sectionTree = computed(() => {
         name: sec.name,
         depth: getDepth(sec.id),
         caseCount: getCasesForSection(sec.id).length,
+        isNew: sec.isNew,
       })
       walk(sec.id)
     }
@@ -179,29 +182,6 @@ const sectionTree = computed(() => {
   walk(null)
   return ordered
 })
-
-const newSectionsFlat = computed(() => {
-  const existingIds = new Set(existingSections.value.map(s => s.id))
-  return newSections.value.map((sec, idx) => ({
-    id: `__new__${idx}`,
-    name: sec.name,
-    depth: sec.parentSectionId && existingIds.has(sec.parentSectionId) ? 1 : 0,
-    caseCount: getCasesForNewSection(sec.name).length,
-  }))
-})
-
-const getSectionName = (sectionId: string) => {
-  const section = existingSections.value.find((s) => s.id === sectionId)
-  return section?.name || `#${sectionId}`
-}
-
-const getCasesForSection = (sectionId: string) => {
-  return cases.value.filter((c) => c.targetSectionId === sectionId)
-}
-
-const getCasesForNewSection = (sectionName: string) => {
-  return cases.value.filter((c) => c.targetSectionName === sectionName)
-}
 
 const containerRef = ref<HTMLElement | null>(null)
 const leftWidth = ref(400)
