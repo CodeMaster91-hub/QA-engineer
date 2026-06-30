@@ -131,6 +131,7 @@
 ```env
 # TestRail Connection
 TESTRAIL_URL=https://yourcompany.testrail.io
+TESTRAIL_EMAIL=your-email@example.com
 TESTRAIL_API_KEY=your-api-key
 TESTRAIL_MOCK=true
 
@@ -145,6 +146,7 @@ TESTRAIL_SECTION_ID=  # опционально, если пусто - созда
 | Переменная | Описание | Обязательная |
 |------------|----------|--------------|
 | `TESTRAIL_URL` | URL TestRail | Да |
+| `TESTRAIL_EMAIL` | Email аккаунта TestRail (для Basic Auth) | Да |
 | `TESTRAIL_API_KEY` | API ключ TestRail | Да |
 | `TESTRAIL_MOCK` | Режим mock (true/false) | Нет (default: true) |
 | `TESTRAIL_PROJECT_ID` | ID проекта по умолчанию | Нет |

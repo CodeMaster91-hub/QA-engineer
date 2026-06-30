@@ -18,7 +18,7 @@ import { QueueModule } from './common/queue/queue.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../../.env',
+      envFilePath: ['.env'],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
