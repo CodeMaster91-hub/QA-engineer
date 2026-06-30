@@ -378,9 +378,21 @@ export class PipelineService {
           pipeline.blockedStage = nextStage;
           await this.pipelineRepository.save(pipeline);
           this.logger.log(`Stage ${stage} completed, restored ${nextStage} status (not re-running)`);
+
+          await this.eventsService.emit(pipeline.featureId, {
+            type: 'pipeline:stage-update',
+            data: { stage, status: StageStatus.Success },
+            timestamp: new Date(),
+          });
         } else {
           pipeline.currentStage = nextStage;
           await this.pipelineRepository.save(pipeline);
+
+          await this.eventsService.emit(pipeline.featureId, {
+            type: 'pipeline:stage-update',
+            data: { stage, status: StageStatus.Success },
+            timestamp: new Date(),
+          });
 
           await this.pipelineQueue.add({
             pipelineId: pipeline.id,
