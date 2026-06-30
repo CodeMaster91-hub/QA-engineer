@@ -375,6 +375,7 @@ ${JSON.stringify(existingRequirements, null, 2)}
       return {
         stage: PipelineStage.TEST_CASES_CREATED,
         status: 'failed',
+        fatal: true,
         error: 'Требования не найдены. Убедитесь что этап Requirements завершён успешно.',
         timestamp: new Date(),
       };
@@ -449,7 +450,8 @@ ${JSON.stringify(existingRequirements, null, 2)}
       return {
         stage: PipelineStage.TEST_CASES_CREATED,
         status: 'failed',
-        error: 'LLM вернул невалидный JSON. Этап будет перезапущен.',
+        fatal: true,
+        error: 'LLM вернул невалидный JSON.',
         timestamp: new Date(),
       };
     }
