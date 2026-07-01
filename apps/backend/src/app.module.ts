@@ -1,17 +1,34 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-function findEnvFile(): string | undefined {
-  const candidates = [
+function findEnvFiles(): string[] {
+  const paths: string[] = [
+    // Relative to __dirname (works for dist/main.js in any deployment)
     join(__dirname, '../../../.env'),
     join(__dirname, '../../.env'),
     join(__dirname, '../.env'),
     join(__dirname, '.env'),
+
+    // Company server paths for deployed environments
+    '/etc/qa-platform/.env',
+    '/opt/qa-platform/.env',
+
+    // CWD-based paths (works for ts-node / nest start --watch)
+    join(process.cwd(), '.env'),
+    join(process.cwd(), '../.env'),
+    join(process.cwd(), '../../.env'),
   ];
-  return candidates.find((p) => existsSync(p));
+
+  const existing = paths.filter((p) => existsSync(p));
+  if (existing.length > 0) {
+    Logger.log(`Loading .env from: ${existing[0]}`, 'AppModule');
+  } else {
+    Logger.warn('No .env file found — using system environment variables only', 'AppModule');
+  }
+  return existing;
 }
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -30,7 +47,7 @@ import { QueueModule } from './common/queue/queue.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: findEnvFile(),
+      envFilePath: findEnvFiles(),
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

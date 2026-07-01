@@ -170,10 +170,35 @@ SSE на фронтенде удалён. Вместо этого — **HTTP pol
 
 ## LLM и очередь
 
+### LLMService
+
 - **LLMService.complete()** принимает `PipelineStage` (строку-enum) в качестве первого аргумента — НЕ объект
 - **InMemoryQueue**: кастомная очередь в памяти для dev; BullMQ — для production (Redis обязателен)
 - **LLM_MOCK=true**: моковые ответы для разработки без реального LLM
 - **ioredis**: динамический импорт, не в package.json — Redis работает только если пакет установлен вручную
+
+### Health-check при старте
+
+`LLMService.onModuleInit()` выполняет GET `${baseUrl}/models` с таймаутом 5s:
+- `200` → `[LOG] LLM endpoint reachable: ${baseUrl}/models`
+- Ошибка → `[WARN] LLM endpoint unreachable: ${baseUrl} — ...`
+- Не блокирует startup — только предупреждение
+- Пропускается при `LLM_MOCK=true`
+
+### Timeout
+
+`LLM_TIMEOUT` (env, default `60000` ms) — таймаут каждого запроса к LLM. Устанавливается через `AbortSignal.timeout`.
+
+### Сетевые ошибки
+
+В `complete()` ошибки `fetch` логируются с расшифровкой `error.cause`:
+| Ситуация | Сообщение |
+|----------|-----------|
+| Неверный IP/hostname (таймаут) | `Connection timeout (host unreachable or wrong IP/hostname)` |
+| Сервер слишком медленный | `Response timeout (server too slow)` |
+| Сервер не запущен/не тот порт | `Connection refused (server not running or wrong port)` |
+| Hostname не найден | `DNS resolution failed (hostname not found)` |
+| Прочее | `error.code: error.message` |
 
 ## TMS / TestRail
 
@@ -182,4 +207,5 @@ SSE на фронтенде удалён. Вместо этого — **HTTP pol
 - **AdapterFactory** выбирает адаптер по `TMS_PROVIDER` env: `testrail` | `zephyr` | `testit` | `testlink`
 - **getTree()** возвращает `TmsNode[]` — плоский список с `type: 'suite' | 'section'`
 - **TestRail API v2 — paginated responses**: Все collection-эндпоинты возвращают обёртку `{ offset, limit, size, _links, <resource>: [...] }`, а НЕ голый массив. Адаптер извлекает данные через `response.suites || []`, `response.sections || []`, `response.projects || []`
-- **`.env` приоритет**: `@nestjs/config` v4 с `dotenv` 17.x НЕ перезаписывает уже заданные системные env-переменные. Функция `loadEnvFileWithOverride()` в `main.ts` принудительно записывает `.env` значения в `process.env` ДО инициализации ConfigModule, чтобы `.env` всегда побеждал системные переменные
+- **`.env` приоритет**: Системные переменные окружения (установленные через Kubernetes, systemd, Docker, export и т.д.) имеют **наивысший приоритет** и НЕ перезаписываются `.env` файлом. `@nestjs/config` v4 загружает `.env`, но устанавливает значения только если ключ отсутствует в `process.env`. Поиск `.env` в `app.module.ts` (`findEnvFiles()`) проверяет пути в порядке: `__dirname`-relative (dist), `/etc/qa-platform/.env`, `/opt/qa-platform/.env`, CWD-relative. Первый найденный файл используется.
+--- **`LLM_MOCK`**: по умолчанию `false`. Если переменная не задана — запросы уходят к реальному LLM. Для включения мока на сервере: `export LLM_MOCK=true` или в `/etc/qa-platform/.env`.

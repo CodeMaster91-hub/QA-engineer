@@ -98,10 +98,11 @@ LLM_ALIAS_<STAGE> (override для стадии)
 
 ```env
 # LLM Provider
-LLM_BASE_URL=https://your-llm-provider.com/v1
+LLM_BASE_URL=http://DESKTOP-3UP6BV7:1234/v1
 LLM_API_KEY=your-api-key
 LLM_MODEL=your-model-id
 LLM_MOCK=false
+LLM_TIMEOUT=60000
 
 # LLM Provider Info
 LLM_PROVIDER_ID=your-provider-id
@@ -118,6 +119,65 @@ LLM_ALIAS_DRY_RUN=your-model-id
 # Legacy fallback
 LLM_DEFAULT_ALIAS=your-model-id
 ```
+
+| Переменная | По умолчанию | Описание |
+|------------|-------------|----------|
+| `LLM_BASE_URL` | — | URL LLM-провайдера (OpenAI-compatible). Можно указать hostname вместо IP |
+| `LLM_API_KEY` | — | API-ключ провайдера |
+| `LLM_MODEL` | — | Модель по умолчанию для всех этапов |
+| `LLM_MOCK` | `false` | Моковый режим. `true` — ответы генерируются без запроса к LLM |
+| `LLM_TIMEOUT` | `60000` | Таймаут каждого запроса в мс (через `AbortSignal.timeout`) |
+
+### LLM_BASE_URL — hostname вместо IP
+
+Вместо хардкода IP можно использовать hostname машины:
+
+```env
+LLM_BASE_URL=http://DESKTOP-3UP6BV7:1234/v1
+```
+
+Windows резолвит hostname через NetBIOS/mDNS в локальной сети, поэтому при смене IP (VPN, Wi-Fi) соединение будет работать автоматически. Узнать hostname:
+
+```cmd
+hostname
+```
+
+## Health-check при старте
+
+`LLMService.onModuleInit()` выполняет `GET ${baseUrl}/models` с таймаутом 5s:
+
+- **200** → `[LOG] LLM endpoint reachable: ${baseUrl}/models`
+- **Ошибка** → `[WARN] LLM endpoint unreachable: ${baseUrl} — ${cause}. Проверь LLM_BASE_URL и доступность сервера.`
+- Не блокирует startup — только предупреждение
+- Пропускается при `LLM_MOCK=true`
+
+## Сетевые ошибки
+
+`complete()` перехватывает ошибки `fetch` и расшифровывает `error.cause` (Node undici):
+
+| Ситуация | Сообщение в логе |
+|----------|-----------------|
+| Неверный IP/hostname (таймаут) | `Connection timeout (host unreachable or wrong IP/hostname)` |
+| Сервер слишком медленный | `Response timeout (server too slow)` |
+| Сервер не запущен / не тот порт | `Connection refused (server not running or wrong port)` |
+| Hostname не найден (DNS) | `DNS resolution failed (hostname not found)` |
+| Прочее | `error.code: error.message` |
+
+После логирования ошибка пробрасывается вверх — пайплайн переходит в `failed`.
+
+## .env и приоритет переменных
+
+Системные переменные окружения (Kubernetes, systemd, Docker, `export`) имеют **наивысший приоритет** и НЕ перезаписываются `.env` файлом.
+
+`@nestjs/config` загружает `.env`, но устанавливает значения только если ключ отсутствует в `process.env`.
+
+Поиск `.env` в `app.module.ts` (`findEnvFiles()`) проверяет пути:
+1. `__dirname`-relative (dist, src, корень проекта)
+2. `/etc/qa-platform/.env`
+3. `/opt/qa-platform/.env`
+4. CWD-relative (cwd, ../, ../../)
+
+Первый найденный файл используется.
 
 ## Интеграция
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AgentsService } from './agents.service';
 import { PipelineStage } from '../pipeline/pipeline.entity';
@@ -18,13 +18,49 @@ export interface LLMResponse {
 }
 
 @Injectable()
-export class LLMService {
+export class LLMService implements OnModuleInit {
   private readonly logger = new Logger(LLMService.name);
 
   constructor(
     private configService: ConfigService,
     private agentsService: AgentsService,
   ) {}
+
+  async onModuleInit() {
+    await this.healthCheck();
+  }
+
+  private async healthCheck(): Promise<void> {
+    if (this.isMock()) return;
+
+    const baseUrl = this.getBaseUrl();
+    if (!baseUrl) {
+      this.logger.warn('LLM_BASE_URL not set — skipping health check');
+      return;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`${baseUrl}/models`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (response.ok) {
+        this.logger.log(`LLM endpoint reachable: ${baseUrl}/models`);
+      } else {
+        this.logger.warn(`LLM endpoint returned ${response.status}: ${baseUrl}/models`);
+      }
+    } catch (error) {
+      const cause = this.describeNetworkError(error);
+      this.logger.warn(
+        `LLM endpoint unreachable: ${baseUrl} — ${cause}. Проверь LLM_BASE_URL и доступность сервера.`,
+      );
+    }
+  }
 
   private getBaseUrl(): string {
     return this.configService.get<string>('LLM_BASE_URL', '');
@@ -35,7 +71,31 @@ export class LLMService {
   }
 
   private isMock(): boolean {
-    return this.configService.get<string>('LLM_MOCK', 'true') === 'true';
+    return this.configService.get<string>('LLM_MOCK', 'false') === 'true';
+  }
+
+  private getTimeoutMs(): number {
+    return Number(this.configService.get<string>('LLM_TIMEOUT', '60000'));
+  }
+
+  private describeNetworkError(error: any): string {
+    const cause = error.cause;
+    if (cause) {
+      if (cause.code === 'UND_ERR_CONNECT_TIMEOUT') {
+        return `Connection timeout (host unreachable or wrong IP/hostname): ${cause.message}`;
+      }
+      if (cause.code === 'UND_ERR_HEADERS_TIMEOUT') {
+        return `Response timeout (server too slow): ${cause.message}`;
+      }
+      if (cause.code === 'UND_ERR_SOCKET' || cause.message?.includes('ECONNREFUSED')) {
+        return `Connection refused (server not running or wrong port): ${cause.message}`;
+      }
+      if (cause.code === 'ENOTFOUND' || cause.message?.includes('ENOTFOUND')) {
+        return `DNS resolution failed (hostname not found): ${cause.message}`;
+      }
+      if (cause.message) return `${cause.code || 'error'}: ${cause.message}`;
+    }
+    return error.message || String(error);
   }
 
   async complete(
@@ -50,6 +110,7 @@ export class LLMService {
 
     const baseUrl = this.getBaseUrl();
     const apiKey = this.getApiKey();
+    const timeoutMs = this.getTimeoutMs();
 
     if (!baseUrl) {
       throw new Error('LLM_BASE_URL is not configured');
@@ -59,19 +120,32 @@ export class LLMService {
       `LLM request: stage=${stage}, alias=${config.alias}, tokens=${config.maxTokens}`,
     );
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.alias,
-        messages,
-        temperature: config.temperature,
-        max_tokens: config.maxTokens,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.alias,
+          messages,
+          temperature: config.temperature,
+          max_tokens: config.maxTokens,
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      const cause = this.describeNetworkError(error);
+      this.logger.error(
+        `LLM request failed: ${baseUrl}/chat/completions — ${cause}`,
+      );
+      this.logger.error(
+        `Request details: stage=${stage}, model=${config.alias}, timeout=${timeoutMs}ms`,
+      );
+      throw new Error(`LLM request failed: ${cause}`);
+    }
 
     if (!response.ok) {
       const error = await response.text();
