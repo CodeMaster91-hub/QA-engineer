@@ -42,6 +42,9 @@ export class Feature {
   @Column({ nullable: true })
   sourceFileName: string;
 
+  @Column({ nullable: true })
+  sourceUrl: string;
+
   @OneToMany(() => FeatureArtifact, (artifact) => artifact.feature, {
     cascade: true,
     eager: true,

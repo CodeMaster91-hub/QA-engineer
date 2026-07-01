@@ -13,17 +13,24 @@ export class TestRailAdapter extends TmsAdapter {
   readonly provider = 'testrail';
   readonly name = 'TestRail';
 
-  private baseUrl: string;
-  private apiKey: string;
-  private email: string;
-  private isMock: boolean;
+  private getBaseUrl(): string {
+    return this.configService.get<string>('TESTRAIL_URL', '');
+  }
+
+  private getApiKey(): string {
+    return this.configService.get<string>('TESTRAIL_API_KEY', '');
+  }
+
+  private getEmail(): string {
+    return this.configService.get<string>('TESTRAIL_EMAIL', '');
+  }
+
+  private isMock(): boolean {
+    return this.configService.get<string>('TESTRAIL_MOCK', 'true') === 'true';
+  }
 
   constructor(private configService: ConfigService) {
     super();
-    this.baseUrl = this.configService.get<string>('TESTRAIL_URL', '');
-    this.apiKey = this.configService.get<string>('TESTRAIL_API_KEY', '');
-    this.email = this.configService.get<string>('TESTRAIL_EMAIL', '');
-    this.isMock = this.configService.get<string>('TESTRAIL_MOCK', 'true') === 'true';
   }
 
   getSchema(): TmsSchema {
@@ -66,26 +73,30 @@ export class TestRailAdapter extends TmsAdapter {
   }
 
   async getProjects(): Promise<TmsProject[]> {
-    if (this.isMock) {
+    if (this.isMock()) {
       return [
         { id: '1', name: 'Mock Project 1' },
         { id: '2', name: 'Mock Project 2' },
       ];
     }
-    return this.request<TmsProject[]>('GET', 'get_projects');
+    const response = await this.request<any>('GET', 'get_projects');
+    return Array.isArray(response) ? response : response.projects || [];
   }
 
   async getTree(projectId: string): Promise<TmsNode[]> {
-    if (this.isMock) {
+    if (this.isMock()) {
       return [
         { id: '1', name: 'Mock Suite', type: 'suite', parentId: projectId },
       ];
     }
 
-    const suites = await this.request<any[]>(
+    const suitesResponse = await this.request<any>(
       'GET',
       `get_suites/${projectId}`,
     );
+    const suites = Array.isArray(suitesResponse)
+      ? suitesResponse
+      : suitesResponse.suites || [];
 
     const nodes: TmsNode[] = [];
 
@@ -97,10 +108,13 @@ export class TestRailAdapter extends TmsAdapter {
         parentId: projectId,
       });
 
-      const sections = await this.request<any[]>(
+      const sectionsResponse = await this.request<any>(
         'GET',
         `get_sections/${projectId}&suite_id=${suite.id}`,
       );
+      const sections = Array.isArray(sectionsResponse)
+        ? sectionsResponse
+        : sectionsResponse.sections || [];
 
       for (const section of sections) {
         nodes.push({
@@ -118,11 +132,11 @@ export class TestRailAdapter extends TmsAdapter {
   async publish(params: PublishParams): Promise<PublishResult> {
     const { projectId, nodeId, testCases } = params;
 
-    if (this.isMock) {
+    if (this.isMock()) {
       return {
         success: true,
         publishedCount: testCases.length,
-        nodeUrl: `${this.baseUrl}/index.php?/projects/view/${projectId}`,
+        nodeUrl: `${this.getBaseUrl()}/index.php?/projects/view/${projectId}`,
       };
     }
 
@@ -143,7 +157,7 @@ export class TestRailAdapter extends TmsAdapter {
     return {
       success: errors.length === 0,
       publishedCount,
-      nodeUrl: `${this.baseUrl}/index.php?/projects/view/${projectId}`,
+      nodeUrl: `${this.getBaseUrl()}/index.php?/projects/view/${projectId}`,
       errors: errors.length > 0 ? errors : undefined,
     };
   }
@@ -201,10 +215,10 @@ export class TestRailAdapter extends TmsAdapter {
     endpoint: string,
     body?: any,
   ): Promise<T> {
-    const auth = Buffer.from(`${this.email}:${this.apiKey}`).toString('base64');
+    const auth = Buffer.from(`${this.getEmail()}:${this.getApiKey()}`).toString('base64');
 
     const response = await fetch(
-      `${this.baseUrl}/index.php?/api/v2/${endpoint}`,
+      `${this.getBaseUrl()}/index.php?/api/v2/${endpoint}`,
       {
         method,
         headers: {

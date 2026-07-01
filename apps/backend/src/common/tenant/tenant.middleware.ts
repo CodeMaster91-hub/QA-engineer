@@ -1,4 +1,4 @@
-import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 
@@ -13,8 +13,6 @@ declare global {
 
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
-  private readonly logger = new Logger(TenantMiddleware.name);
-
   constructor(private configService: ConfigService) {}
 
   use(req: Request, _res: Response, next: NextFunction) {
@@ -23,7 +21,6 @@ export class TenantMiddleware implements NestMiddleware {
     req.tenantId = tenantId;
     req.tenantSchema = tenantId;
 
-    this.logger.debug(`Tenant resolved: ${tenantId}`);
     next();
   }
 }

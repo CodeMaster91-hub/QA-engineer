@@ -134,6 +134,9 @@ export class FeaturesService {
     const feature = await this.create(slug, title);
     feature.sourceType = sourceType;
     feature.sourceFileName = fileName || undefined as any;
+    if (sourceType === 'url' && sourceUrl) {
+      feature.sourceUrl = sourceUrl;
+    }
     await this.featuresRepository.save(feature);
 
     await this.upsertArtifact(feature.id, ArtifactType.SOURCE, {
@@ -268,5 +271,52 @@ export class FeaturesService {
       });
     }
     return this.artifactsRepository.save(artifact);
+  }
+
+  async updateSource(
+    slug: string,
+    sourceType: 'text' | 'file',
+    sourceText?: string,
+    file?: Express.Multer.File,
+  ): Promise<void> {
+    const feature = await this.findBySlug(slug);
+    let processedContent: ProcessedFile;
+
+    if (sourceType === 'text') {
+      if (!sourceText) {
+        throw new BadRequestException('sourceText is required');
+      }
+      processedContent = {
+        text: sourceText,
+        images: [],
+        metadata: { type: 'text' },
+      };
+    } else if (sourceType === 'file') {
+      if (!file) {
+        throw new BadRequestException('File is required');
+      }
+      processedContent = await this.fileProcessor.processFile(
+        file.buffer,
+        file.originalname,
+      );
+      feature.sourceFileName = decodeURIComponent(
+        Buffer.from(file.originalname, 'latin1').toString('utf8'),
+      );
+      await this.featuresRepository.save(feature);
+    } else {
+      throw new BadRequestException(`Invalid sourceType: ${sourceType}`);
+    }
+
+    await this.upsertArtifact(feature.id, ArtifactType.SOURCE, {
+      text: processedContent.text,
+      images: processedContent.images.map((img) => ({
+        data: img.data,
+        mimeType: img.mimeType,
+        name: img.name,
+      })),
+      metadata: processedContent.metadata,
+    });
+
+    this.logger.log(`Source updated for feature: ${slug}`);
   }
 }

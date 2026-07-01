@@ -6,7 +6,12 @@
         <h3>Источник</h3>
       </div>
       <div class="panel-body">
-        <div v-if="text || images.length" class="source-content">
+        <div v-if="isSourceRefreshing" class="source-refreshing">
+          <div class="loading-spinner"></div>
+          <p>Перечитывание источника...</p>
+          <p class="loading-hint">Загружаем актуальную версию документа</p>
+        </div>
+        <div v-else-if="text || images.length" class="source-content">
           <div class="markdown-rendered" v-html="renderedText"></div>
           <div v-if="images.length" class="source-images">
             <div v-for="(img, idx) in images" :key="idx" class="source-image">
@@ -68,7 +73,21 @@
             </tbody>
           </table>
         </div>
-        <div v-else-if="error" class="pipeline-error">{{ error }}</div>
+        <div v-else-if="error" class="error-state">
+          <div class="error-icon">⚠️</div>
+          <h3 class="error-title">Не удалось извлечь требования</h3>
+          <p class="error-desc">
+            Обработка запроса к AI-провайдеру завершилась ошибкой.<br>
+            Проверьте настройки AI-агентов в разделе <strong>Настройки</strong>
+            и повторите этап.
+          </p>
+          <div class="error-tech">
+            <code>{{ error }}</code>
+          </div>
+          <button class="btn btn-primary" @click="$emit('retry')">
+            🔄 Повторить
+          </button>
+        </div>
         <div v-else-if="!isProcessing" class="empty">Нет требований</div>
       </div>
     </div>
@@ -86,11 +105,13 @@ const props = defineProps<{
   artifact: Artifact | null
   questions: PipelineQuestion[]
   isProcessing?: boolean
+  isSourceRefreshing?: boolean
   error?: string
 }>()
 
 defineEmits<{
   answer: []
+  retry: []
 }>()
 
 const requirements = computed(() => props.artifact?.content?.requirements || [])
@@ -340,6 +361,50 @@ th {
   font-size: 0.9em;
 }
 
+.error-state {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 10px;
+}
+
+.error-icon {
+  font-size: 2.2em;
+  margin-bottom: 4px;
+}
+
+.error-title {
+  margin: 0;
+  color: #1a1a2e;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.error-desc {
+  margin: 0;
+  color: #666;
+  font-size: 0.9em;
+  line-height: 1.5;
+  max-width: 360px;
+}
+
+.error-tech {
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin: 4px 0;
+}
+
+.error-tech code {
+  font-size: 0.8em;
+  color: #999;
+}
+
 /* Loading placeholder */
 .loading-placeholder {
   display: flex;
@@ -369,5 +434,19 @@ th {
   font-size: 0.85em;
   color: #999;
   margin-top: 4px;
+}
+
+.source-refreshing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #666;
+  text-align: center;
+}
+
+.source-refreshing p {
+  margin: 8px 0;
 }
 </style>

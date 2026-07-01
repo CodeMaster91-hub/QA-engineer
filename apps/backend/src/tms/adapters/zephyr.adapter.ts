@@ -13,15 +13,20 @@ export class ZephyrAdapter extends TmsAdapter {
   readonly provider = 'zephyr';
   readonly name = 'Zephyr Scale';
 
-  private baseUrl: string;
-  private apiToken: string;
-  private isMock: boolean;
+  private getBaseUrl(): string {
+    return this.configService.get<string>('ZEPHYR_URL', '');
+  }
+
+  private getApiToken(): string {
+    return this.configService.get<string>('ZEPHYR_API_TOKEN', '');
+  }
+
+  private isMock(): boolean {
+    return this.configService.get<string>('ZEPHYR_MOCK', 'true') === 'true';
+  }
 
   constructor(private configService: ConfigService) {
     super();
-    this.baseUrl = this.configService.get<string>('ZEPHYR_URL', '');
-    this.apiToken = this.configService.get<string>('ZEPHYR_API_TOKEN', '');
-    this.isMock = this.configService.get<string>('ZEPHYR_MOCK', 'true') === 'true';
   }
 
   getSchema(): TmsSchema {
@@ -56,7 +61,7 @@ export class ZephyrAdapter extends TmsAdapter {
   }
 
   async getProjects(): Promise<TmsProject[]> {
-    if (this.isMock) {
+    if (this.isMock()) {
       return [
         { id: '1', name: 'Mock Project 1' },
         { id: '2', name: 'Mock Project 2' },
@@ -66,7 +71,7 @@ export class ZephyrAdapter extends TmsAdapter {
   }
 
   async getTree(projectId: string): Promise<TmsNode[]> {
-    if (this.isMock) {
+    if (this.isMock()) {
       return [
         { id: '1', name: 'Mock Folder', type: 'folder', parentId: projectId },
       ];
@@ -102,11 +107,11 @@ export class ZephyrAdapter extends TmsAdapter {
   async publish(params: PublishParams): Promise<PublishResult> {
     const { projectId, nodeId, testCases } = params;
 
-    if (this.isMock) {
+    if (this.isMock()) {
       return {
         success: true,
         publishedCount: testCases.length,
-        nodeUrl: `${this.baseUrl}/projects/${projectId}/folders/${nodeId}`,
+        nodeUrl: `${this.getBaseUrl()}/projects/${projectId}/folders/${nodeId}`,
       };
     }
 
@@ -125,7 +130,7 @@ export class ZephyrAdapter extends TmsAdapter {
     return {
       success: errors.length === 0,
       publishedCount,
-      nodeUrl: `${this.baseUrl}/projects/${projectId}/folders/${nodeId}`,
+      nodeUrl: `${this.getBaseUrl()}/projects/${projectId}/folders/${nodeId}`,
       errors: errors.length > 0 ? errors : undefined,
     };
   }
@@ -181,12 +186,12 @@ export class ZephyrAdapter extends TmsAdapter {
     body?: any,
   ): Promise<T> {
     const response = await fetch(
-      `${this.baseUrl}/rest/api/latest/${endpoint}`,
+      `${this.getBaseUrl()}/rest/api/latest/${endpoint}`,
       {
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiToken}`,
+          Authorization: `Bearer ${this.getApiToken()}`,
         },
         body: body ? JSON.stringify(body) : undefined,
       },

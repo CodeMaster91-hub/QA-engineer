@@ -145,6 +145,7 @@ export interface Feature {
   status: string;
   sourceType?: string;
   sourceFileName?: string;
+  sourceUrl?: string;
   artifacts?: Artifact[];
   reqCount: number;
   caseCount: number;

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { LLMService } from '../agents/llm.service';
 import { FeaturesService } from '../features/features.service';
 import { TmsService } from '../tms/tms.service';
+import { UrlFetcherService } from '../common/url-fetcher/url-fetcher.service';
 import {
   PipelineStage,
   PIPELINE_STAGE_ORDER,
@@ -29,6 +30,7 @@ export class WorkflowEngine {
     private featuresService: FeaturesService,
     private tmsService: TmsService,
     private configService: ConfigService,
+    private urlFetcherService: UrlFetcherService,
   ) {}
 
   private parseJsonResponse(content: string): any {
@@ -64,7 +66,7 @@ export class WorkflowEngine {
           output = await this.ingestSource(feature.id, previousResults);
           break;
         case PipelineStage.REQUIREMENTS_EXTRACTED:
-          return await this.extractRequirements(feature.id, previousResults);
+          return await this.extractRequirements(feature.id, previousResults, feature.slug);
         case PipelineStage.TEST_PLAN_CREATED:
           output = await this.createTestPlan(feature.id, previousResults);
           break;
@@ -121,7 +123,35 @@ export class WorkflowEngine {
   private async extractRequirements(
     featureId: string,
     previousResults: Record<string, any>,
+    featureSlug?: string,
   ): Promise<StageResult> {
+    const feature = featureSlug
+      ? await this.featuresService.findBySlug(featureSlug)
+      : await this.featuresService.findById(featureId);
+
+    if (feature.sourceType === 'url' && feature.sourceUrl) {
+      this.logger.log(`Re-fetching source from URL: ${feature.sourceUrl}`);
+      try {
+        const fetchResult = await this.urlFetcherService.fetchUrl(feature.sourceUrl);
+        if (fetchResult.ok) {
+          await this.featuresService.upsertArtifact(featureId, ArtifactType.SOURCE, {
+            text: fetchResult.text || '',
+            images: (fetchResult.images || []).map((img) => ({
+              data: img.data,
+              mimeType: img.mimeType,
+              name: img.name,
+            })),
+            metadata: fetchResult.metadata || {},
+          });
+          this.logger.log(`Source re-fetched successfully from URL`);
+        } else {
+          this.logger.warn(`URL re-fetch failed: ${fetchResult.error}, using cached source`);
+        }
+      } catch (err) {
+        this.logger.warn(`URL re-fetch error: ${err.message}, using cached source`);
+      }
+    }
+
     const sourceArtifact = await this.featuresService.getArtifact(
       featureId,
       ArtifactType.SOURCE,

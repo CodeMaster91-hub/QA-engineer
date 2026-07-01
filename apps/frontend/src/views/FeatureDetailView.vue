@@ -100,6 +100,7 @@
           :is-processing="isStageProcessing('requirements_extracted') && !getArtifact('requirements')"
           :error="pipeline?.error"
           @answer="onAnswerQuestions"
+          @retry="doRestart('requirements_extracted')"
         />
         <TestPlanStage
           v-else-if="selectedStage === 'test_plan'"
