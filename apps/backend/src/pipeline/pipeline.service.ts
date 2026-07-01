@@ -34,6 +34,12 @@ export class PipelineService {
     this.pipelineQueue = this.queueService.getQueue('pipeline');
   }
 
+  async findByFeatureId(featureId: string): Promise<Pipeline | null> {
+    return this.pipelineRepository.findOne({
+      where: { featureId },
+    });
+  }
+
   async findByFeatureSlug(slug: string): Promise<Pipeline> {
     const feature = await this.featuresService.findBySlug(slug);
     let pipeline = await this.pipelineRepository.findOne({
@@ -345,10 +351,6 @@ export class PipelineService {
       });
     }
 
-    return this.findByFeatureSlug(slug);
-  }
-
-  async getStatus(slug: string): Promise<Pipeline> {
     return this.findByFeatureSlug(slug);
   }
 

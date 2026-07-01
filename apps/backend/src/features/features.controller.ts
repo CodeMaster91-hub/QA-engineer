@@ -16,6 +16,7 @@
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FeaturesService } from './features.service';
+import { PipelineService } from '../pipeline/pipeline.service';
 import { CreateFeatureDto } from './dto/create-feature.dto';
 import { CreateFeatureWithSourceDto } from './dto/create-feature-with-source.dto';
 import { CreateArtifactDto } from './dto/create-artifact.dto';
@@ -34,6 +35,7 @@ export class FeaturesController {
 
   constructor(
     private featuresService: FeaturesService,
+    private pipelineService: PipelineService,
     private configService: ConfigService,
   ) {
     this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', 10 * 1024 * 1024);
@@ -117,11 +119,13 @@ export class FeaturesController {
   }
 
   @Get(':slug')
-  @ApiOperation({ summary: 'Get feature by slug' })
+  @ApiOperation({ summary: 'Get feature by slug with pipeline status and artifacts' })
   @ApiResponse({ status: 200, description: 'Feature found' })
   @ApiResponse({ status: 404, description: 'Feature not found' })
   async findBySlug(@Param('slug') slug: string) {
-    return this.featuresService.findBySlug(slug);
+    const feature = await this.featuresService.findBySlug(slug);
+    const pipeline = await this.pipelineService.findByFeatureId(feature.id);
+    return { feature, pipeline };
   }
 
   @Delete(':slug')
@@ -131,14 +135,6 @@ export class FeaturesController {
   @ApiResponse({ status: 204, description: 'Feature deleted' })
   async remove(@Param('slug') slug: string) {
     await this.featuresService.delete(slug);
-  }
-
-  @Get(':slug/artifacts')
-  @ApiOperation({ summary: 'Get all artifacts for feature' })
-  @ApiResponse({ status: 200, description: 'List of artifacts' })
-  async getArtifacts(@Param('slug') slug: string) {
-    const feature = await this.featuresService.findBySlug(slug);
-    return this.featuresService.getArtifacts(feature.id);
   }
 
   @Get(':slug/artifacts/:type')
@@ -166,5 +162,44 @@ export class FeaturesController {
       createArtifactDto.type,
       createArtifactDto.content,
     );
+  }
+
+  @Post(':slug/source')
+  @IsPublic()
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  @ApiOperation({ summary: 'Update source artifact (text or file)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        sourceType: { type: 'string', enum: ['text', 'file'] },
+        sourceText: { type: 'string' },
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['sourceType'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Source updated' })
+  async updateSource(
+    @Param('slug') slug: string,
+    @Body('sourceType') sourceType: 'text' | 'file',
+    @Body('sourceText') sourceText?: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (sourceType === 'file' && !file) {
+      throw new BadRequestException('File is required when sourceType is "file"');
+    }
+    if (file && file.size > this.maxFileSize) {
+      throw new BadRequestException(
+        `File size exceeds limit of ${this.maxFileSize / 1024 / 1024}MB`,
+      );
+    }
+    await this.featuresService.updateSource(slug, sourceType, sourceText, file);
+    return { success: true };
   }
 }

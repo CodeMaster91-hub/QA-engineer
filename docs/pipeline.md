@@ -180,26 +180,31 @@ Body: { "stage": "requirements_extracted" }
 
 ## Endpoints
 
-### GET /api/pipeline/:slug/status
+### GET /api/features/:slug (consolidated)
 
-Получить статус пайплайна.
+Статус пайплайна, фича и артефакты возвращаются одним запросом. Заменяет старые `GET /api/pipeline/:slug/status` и `GET /api/features/:slug/artifacts`.
 
 **Response:**
 ```json
 {
-  "id": "uuid",
-  "featureId": "uuid",
-  "status": "running",
-  "currentStage": "requirements_extracted",
-  "stageResults": {
-    "source_ingested": { "status": "completed", ... }
+  "feature": {
+    "id": "uuid", "slug": "my-feature", "title": "My Feature",
+    "artifacts": [{ "type": "source", "content": {}, ... }],
+    ...
   },
-  "questions": [],
-  "blockedStage": null,
-  "coverageGaps": null,
-  "retryCount": 0,
-  "maxRetries": 3,
-  "createdAt": "2026-01-01T00:00:00Z"
+  "pipeline": {
+    "id": "uuid",
+    "featureId": "uuid",
+    "status": "running",
+    "currentStage": "requirements_extracted",
+    "stageResults": {
+      "source_ingested": { "status": "completed", ... }
+    },
+    "questions": [],
+    "blockedStage": null,
+    "coverageGaps": null,
+    ...
+  }
 }
 ```
 
@@ -335,8 +340,8 @@ PIPELINE_RETRY_DELAY=2000
 curl -X POST http://localhost:3000/api/pipeline/my-feature/run \
   -H "Authorization: Bearer <token>"
 
-# Проверка статуса
-curl http://localhost:3000/api/pipeline/my-feature/status \
+# Проверка статуса (фича + пайплайн + артефакты)
+curl http://localhost:3000/api/features/my-feature \
   -H "Authorization: Bearer <token>"
 
 # Отмена

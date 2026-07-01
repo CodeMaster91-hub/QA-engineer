@@ -275,8 +275,18 @@ const loadFeatures = async () => {
 
 const loadPipeline = async (slug: string) => {
   try {
-    const p = await api.get<Pipeline>(`/pipeline/${slug}/status`)
-    pipelineMap.value[slug] = p
+    const res = await api.get<{ feature: any; pipeline: Pipeline | null }>(`/features/${slug}`)
+    if (res.pipeline) {
+      pipelineMap.value[slug] = res.pipeline
+    } else {
+      const feature = res.feature
+      pipelineMap.value[slug] = {
+        id: '', featureId: feature.id, status: 'idle', currentStage: 'new',
+        stageResults: {}, retryCount: 0, maxRetries: 3,
+        questions: [], blockedStage: null, coverageGaps: null,
+        createdAt: '', updatedAt: '',
+      }
+    }
   } catch {
     const feature = features.value.find(f => f.slug === slug)
     if (feature) {
@@ -419,75 +429,12 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize)
 }
 
-// SSE connections
-interface SseConn {
-  eventSource: EventSource | null
-  retryTimeout: ReturnType<typeof setTimeout> | null
-  retryDelay: number
-  lastEventTimestamp: number
-  disposed: boolean
-}
-const sseConnections = new Map<string, SseConn>()
-const MAX_RETRY_DELAY = 30000
-
-const subscribeToSSE = (featureId: string, slug: string) => {
-  if (sseConnections.has(featureId)) return
-  const conn: SseConn = { eventSource: null as any, retryTimeout: null, retryDelay: 1000, lastEventTimestamp: 0, disposed: false }
-  sseConnections.set(featureId, conn)
-  const connect = () => {
-    if (conn.disposed) return
-    const sinceParam = conn.lastEventTimestamp > 0 ? `?since=${conn.lastEventTimestamp}` : ''
-    const es = new EventSource(`/api/events/stream/${featureId}${sinceParam}`)
-    conn.eventSource = es
-    es.onmessage = (e) => {
-      try {
-        const raw = JSON.parse(e.data)
-        if (raw.id) {
-          const ts = parseInt(raw.id.split('-')[0], 10)
-          if (!isNaN(ts) && ts > conn.lastEventTimestamp) conn.lastEventTimestamp = ts
-        }
-        if (raw.type === 'pipeline:stage-update' || raw.type === 'pipeline:completed' || raw.type === 'pipeline:failed'
-            || raw.type === 'pipeline:blocked' || raw.type === 'pipeline:waiting_for_qa') {
-          loadPipeline(slug)
-        }
-        conn.retryDelay = 1000
-      } catch {}
-    }
-    es.onerror = () => {
-      es.close(); conn.eventSource = null
-      const scheduleReconnect = () => {
-        if (conn.disposed) return
-        if (conn.retryTimeout) clearTimeout(conn.retryTimeout)
-        conn.retryTimeout = setTimeout(() => {
-          conn.retryDelay = Math.min(conn.retryDelay * 2, MAX_RETRY_DELAY)
-          connect()
-        }, conn.retryDelay)
-      }
-      scheduleReconnect()
-    }
-  }
-  connect()
-}
-
-const unsubscribeAll = () => {
-  sseConnections.forEach((conn) => {
-    conn.disposed = true
-    if (conn.retryTimeout) clearTimeout(conn.retryTimeout)
-    conn.eventSource?.close()
-  })
-  sseConnections.clear()
-}
-
 // Polling
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   await Promise.all([loadFeatures(), loadModelInfo()])
   await loadPipelines()
-  features.value.forEach(f => {
-    const p = pipelineMap.value[f.slug]
-    if (p?.status === 'running') subscribeToSSE(p.featureId, f.slug)
-  })
   pollInterval = setInterval(async () => {
     for (const feature of features.value) {
       const status = pipelineMap.value[feature.slug]?.status
@@ -498,7 +445,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (pollInterval) clearInterval(pollInterval)
-  unsubscribeAll()
 })
 </script>
 

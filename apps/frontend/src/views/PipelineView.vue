@@ -83,13 +83,13 @@ const stages = [
 
 const loadPipelines = async () => {
   try {
-    const response = await api.get('/features?limit=100')
-    const features = response.data.items || response.data || []
+    const response = await api.get<{ data: any[]; total: number }>('/features?limit=100')
+    const features = response.data || []
     
     const pipelinePromises = features.map(async (f: any) => {
       try {
-        const res = await api.get(`/pipeline/${f.slug}/status`)
-        return { ...res.data, feature: f }
+        const res = await api.get<{ feature: any; pipeline: any }>(`/features/${f.slug}`)
+        return { ...res.pipeline, feature: res.feature }
       } catch {
         return { featureSlug: f.slug, feature: f, status: 'idle' }
       }

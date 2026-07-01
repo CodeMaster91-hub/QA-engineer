@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Pipeline } from './pipeline.entity';
 import { PipelineService } from './pipeline.service';
@@ -10,15 +10,17 @@ import { AgentsModule } from '../agents/agents.module';
 import { EventsModule } from '../events/events.module';
 import { QueueModule } from '../common/queue/queue.module';
 import { TmsModule } from '../tms/tms.module';
+import { UrlFetcherModule } from '../common/url-fetcher/url-fetcher.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Pipeline]),
     QueueModule,
-    FeaturesModule,
+    forwardRef(() => FeaturesModule),
     AgentsModule,
     EventsModule,
     TmsModule,
+    UrlFetcherModule,
   ],
   controllers: [PipelineController],
   providers: [PipelineService, PipelineProcessor, WorkflowEngine],

@@ -158,12 +158,50 @@
       @close="showTestRailDialog = false"
       @published="onPublished"
     />
+
+    <!-- Source Update Modal -->
+    <div v-if="showSourceModal" class="modal-overlay" @click.self="closeSourceModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Обновить источник</h2>
+          <button class="close-btn" @click="closeSourceModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="modalSourceType === 'text'" class="form-group">
+            <label>Текст источника</label>
+            <textarea v-model="modalSourceText" rows="12" placeholder="Вставьте обновлённый текст..." />
+          </div>
+          <div v-else-if="modalSourceType === 'file'" class="form-group">
+            <label>Загрузить файл</label>
+            <div class="file-drop-zone" :class="{ 'has-file': modalFile }" @click="triggerModalFileInput" @dragover.prevent @drop.prevent="handleModalDrop">
+              <input ref="modalFileInput" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt,.md" style="display: none" @change="handleModalFileSelect" />
+              <div v-if="!modalFile" class="file-placeholder">
+                <span class="file-icon">📁</span>
+                <span>Перетащите файл или кликните</span>
+                <span class="file-hint">PDF, DOCX, XLSX, CSV, TXT, MD (до 10MB)</span>
+              </div>
+              <div v-else class="file-info">
+                <span class="file-name">{{ modalFile.name }}</span>
+                <span class="file-size">{{ formatFileSize(modalFile.size) }}</span>
+                <button type="button" class="file-remove" @click.stop="modalFile = null">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" @click="closeSourceModal">Отмена</button>
+          <button class="btn btn-primary" :disabled="submittingSource" @click="submitSourceUpdate">
+            {{ submittingSource ? 'Обновление...' : 'Обновить и перезапустить' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import PipelineBar from '@/components/PipelineBar.vue'
 import LogViewer from '@/components/LogViewer.vue'
@@ -179,6 +217,7 @@ import type { Pipeline, Feature, Artifact, ArtifactType } from '@/api/types'
 import { PIPELINE_STAGES_UI } from '@/api/types'
 
 const route = useRoute()
+const router = useRouter()
 const featureSlug = computed(() => route.params.slug as string)
 
 const feature = ref<Feature | null>(null)
@@ -190,6 +229,14 @@ const submitting = ref(false)
 const showTestRailDialog = ref(false)
 const selectedStage = ref<string | null>(null)
 const fillingGaps = ref(false)
+
+const showSourceModal = ref(false)
+const pendingRestartStage = ref('')
+const modalSourceType = ref<'text' | 'file'>('text')
+const modalSourceText = ref('')
+const modalFile = ref<File | null>(null)
+const submittingSource = ref(false)
+const modalFileInput = ref<HTMLInputElement | null>(null)
 
 const logEntries = ref<Array<{ level: 'info' | 'warn' | 'error'; message: string }>>([])
 const showLogs = ref(localStorage.getItem('show_logs') !== 'false')
@@ -302,38 +349,11 @@ const onStageSelect = (stage: string) => {
   selectedStage.value = stage
 }
 
-const loadFeature = async () => {
-  const data = await api.get<Feature>(`/features/${featureSlug.value}`)
-  feature.value = data
-}
-
-const loadPipeline = async (version?: number) => {
-  try {
-    const data = await api.get<Pipeline>(`/pipeline/${featureSlug.value}/status`)
-    if (version === undefined || version === pipelineRequestCounter) {
-      pipeline.value = data
-    }
-  } catch (e: any) {
-    if (e.message?.includes('404')) {
-      pipeline.value = null
-    }
-  }
-}
-
-const loadArtifacts = async () => {
-  try {
-    const data = await api.get<Artifact[]>(`/features/${featureSlug.value}/artifacts`)
-    artifacts.value = data
-  } catch {
-    artifacts.value = []
-  }
-}
-
 const autoStartPipeline = async () => {
   if (!pipeline.value || pipeline.value.status !== 'idle') return
   try {
     await api.post(`/pipeline/${featureSlug.value}/run`)
-    await loadPipeline()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to auto-start pipeline:', e)
   }
@@ -343,8 +363,7 @@ const runPipeline = async () => {
   submitting.value = true
   try {
     await api.post(`/pipeline/${featureSlug.value}/run`)
-    await loadPipeline()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to run pipeline:', e)
   } finally {
@@ -355,8 +374,7 @@ const runPipeline = async () => {
 const cancelPipeline = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/cancel`)
-    await loadPipeline()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to cancel pipeline:', e)
   }
@@ -367,8 +385,7 @@ const restartPipeline = async () => {
     await api.post(`/pipeline/${featureSlug.value}/restart`)
     logEntries.value = []
     selectedStage.value = null
-    await loadPipeline()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to restart pipeline:', e)
   }
@@ -377,9 +394,7 @@ const restartPipeline = async () => {
 const onApprove = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/approve`)
-    await loadPipeline()
-    await loadArtifacts()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to approve:', e)
   }
@@ -388,24 +403,83 @@ const onApprove = async () => {
 const onAnswerQuestions = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/answer`)
-    await loadPipeline()
-    await loadArtifacts()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to answer questions:', e)
   }
 }
 
 const onRestartStage = async (stageKey: string) => {
+  if (stageKey === 'requirements_extracted') {
+    const sourceType = feature.value?.sourceType
+    if (sourceType === 'url') {
+      await doRestart(stageKey)
+    } else {
+      pendingRestartStage.value = stageKey
+      modalSourceType.value = (sourceType as 'text' | 'file') || 'text'
+      modalSourceText.value = ''
+      modalFile.value = null
+      showSourceModal.value = true
+    }
+    return
+  }
+  await doRestart(stageKey)
+}
+
+const doRestart = async (stageKey: string) => {
   try {
     const stageUI = PIPELINE_STAGES_UI.find(s => s.key === stageKey)
     if (!stageUI?.backendStage) return
     await api.post(`/pipeline/${featureSlug.value}/restart-stage`, { stage: stageUI.backendStage })
-    await loadPipeline()
-    await loadArtifacts()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to restart stage:', e)
+  }
+}
+
+const closeSourceModal = () => {
+  showSourceModal.value = false
+  pendingRestartStage.value = ''
+  modalSourceText.value = ''
+  modalFile.value = null
+}
+
+const triggerModalFileInput = () => modalFileInput.value?.click()
+
+const handleModalFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files?.length) modalFile.value = target.files[0]
+}
+
+const handleModalDrop = (event: DragEvent) => {
+  const files = event.dataTransfer?.files
+  if (files?.length) modalFile.value = files[0]
+}
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+const submitSourceUpdate = async () => {
+  submittingSource.value = true
+  try {
+    const formData = new FormData()
+    formData.append('sourceType', modalSourceType.value)
+    if (modalSourceType.value === 'text') {
+      formData.append('sourceText', modalSourceText.value)
+    } else if (modalSourceType.value === 'file' && modalFile.value) {
+      formData.append('file', modalFile.value)
+    }
+    await api.postFormData(`/features/${featureSlug.value}/source`, formData)
+    const stageToRestart = pendingRestartStage.value
+    closeSourceModal()
+    await doRestart(stageToRestart)
+  } catch (e: any) {
+    console.error('Failed to update source:', e)
+  } finally {
+    submittingSource.value = false
   }
 }
 
@@ -414,9 +488,7 @@ const onFillGaps = async () => {
   fillingGaps.value = true
   try {
     await api.post(`/pipeline/${featureSlug.value}/fill-gaps`, { gaps: pipeline.value.coverageGaps })
-    await loadPipeline()
-    await loadArtifacts()
-    reconnectSSE()
+    await loadAll()
   } catch (e: any) {
     console.error('Failed to fill gaps:', e)
   } finally {
@@ -429,33 +501,18 @@ const onPublished = (jobId: string) => {
   console.log('TestRail publish started:', jobId)
 }
 
-let eventSource: EventSource | null = null
-let pipelineRequestCounter = 0
-let refreshTimeout: ReturnType<typeof setTimeout> | null = null
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
-const scheduleRefresh = () => {
-  if (refreshTimeout) clearTimeout(refreshTimeout)
-  refreshTimeout = setTimeout(refreshPipeline, 200)
-}
-
-const reconnectSSE = () => {
-  eventSource?.close()
-  eventSource = null
-  initSSE()
-}
-
 const getPollIntervalMs = (): number => {
-  const val = parseInt(localStorage.getItem('poll_interval') || '15', 10)
+  const val = parseInt(localStorage.getItem('poll_interval') || '5', 10)
   return Math.max(5, Math.min(120, val)) * 1000
 }
 
 const startPolling = () => {
   stopPolling()
-  pollInterval = setInterval(() => {
-    const s = pipeline.value?.status
-    if (s && ['running', 'waiting_for_qa', 'blocked'].includes(s)) {
-      scheduleRefresh()
+  pollInterval = setInterval(async () => {
+    if (pipeline.value?.status === 'running') {
+      await loadAll()
     } else {
       stopPolling()
     }
@@ -469,105 +526,17 @@ const stopPolling = () => {
   }
 }
 
-const refreshPipeline = () => {
-  const current = ++pipelineRequestCounter
-  loadPipeline(current).then(async () => {
-    if (current === pipelineRequestCounter) {
-      await loadArtifacts()
-    }
-  })
-}
-
-const initSSE = () => {
-  const featureId = feature.value?.id
-  if (!featureId) return
-
-  eventSource?.close()
-  eventSource = new EventSource(`/api/events/stream/${featureId}`)
-
-  const handleSseMessage = (type: string, rawData: string) => {
-    try {
-      const data = JSON.parse(rawData)
-
-      switch (type) {
-        case 'pipeline:stage-update':
-        case 'pipeline:progress':
-        case 'pipeline:blocked':
-        case 'pipeline:waiting_for_qa':
-        case 'pipeline:completed':
-        case 'pipeline:failed':
-          scheduleRefresh()
-          break
-
-        case 'pipeline:fill-gaps-started':
-          fillingGaps.value = true
-          scheduleRefresh()
-          break
-
-        case 'pipeline:fill-gaps-done':
-          fillingGaps.value = false
-          scheduleRefresh()
-          break
-
-        case 'pipeline:log':
-          logEntries.value.push({
-            level: data.level || 'info',
-            message: data.message || '',
-          })
-          if (data.level === 'info' && data.message?.includes('Completed')) {
-            scheduleRefresh()
-          }
-          break
-      }
-    } catch (err) {
-      console.error('SSE parse error:', err)
-    }
-  }
-
-  const eventTypes = [
-    'pipeline:stage-update',
-    'pipeline:progress',
-    'pipeline:blocked',
-    'pipeline:waiting_for_qa',
-    'pipeline:completed',
-    'pipeline:failed',
-    'pipeline:log',
-    'pipeline:fill-gaps-started',
-    'pipeline:fill-gaps-done',
-  ]
-
-  eventTypes.forEach((type) => {
-    eventSource!.addEventListener(type, (e: MessageEvent) => {
-      handleSseMessage(type, e.data)
-    })
-  })
-
-  eventSource.onmessage = (e) => {
-    handleSseMessage('unknown', e.data)
-  }
-
-  const currentEs = eventSource
-  eventSource.onerror = () => {
-    currentEs.close()
-    setTimeout(() => {
-      if (feature.value?.id && eventSource === currentEs) {
-        initSSE()
-      }
-    }, 3000)
-  }
-}
-
 const loadAll = async () => {
   loading.value = true
   error.value = ''
   logEntries.value = []
 
   try {
-    await loadFeature()
-    await loadPipeline()
-    await loadArtifacts()
+    const response = await api.get<{ feature: Feature; pipeline: Pipeline | null }>(`/features/${featureSlug.value}`)
+    feature.value = response.feature
+    pipeline.value = response.pipeline
+    artifacts.value = response.feature.artifacts || []
     await autoStartPipeline()
-    initSSE()
     startPolling()
 
     // Auto-select first available stage
@@ -577,6 +546,11 @@ const loadAll = async () => {
       selectedStage.value = stageUI?.key || 'requirements_extracted'
     }
   } catch (e: any) {
+    if (e.message?.includes('404')) {
+      localStorage.removeItem('lastFeatureSlug')
+      router.replace('/features')
+      return
+    }
     error.value = e.message || 'Failed to load feature'
   } finally {
     loading.value = false
@@ -586,15 +560,12 @@ const loadAll = async () => {
 onMounted(loadAll)
 
 watch(featureSlug, () => {
-  eventSource?.close()
-  eventSource = null
   stopPolling()
   selectedStage.value = null
   loadAll()
 })
 
 onUnmounted(() => {
-  eventSource?.close()
   stopPolling()
 })
 </script>
@@ -815,5 +786,163 @@ onUnmounted(() => {
   margin: 0 0 12px 0;
   color: #1a1a2e;
   font-size: 1em;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 40px rgba(26, 44, 66, 0.08);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2em;
+  color: #1a1a2e;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  color: #999;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body .form-group {
+  margin-bottom: 16px;
+}
+
+.modal-body label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9em;
+}
+
+.modal-body textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 200px;
+}
+
+.modal-body textarea:focus {
+  outline: none;
+  border-color: #1068bf;
+  box-shadow: 0 0 0 3px rgba(16, 104, 191, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+}
+
+.file-drop-zone {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-drop-zone:hover {
+  border-color: #1068bf;
+  background: rgba(16, 104, 191, 0.02);
+}
+
+.file-drop-zone.has-file {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.file-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #666;
+}
+
+.file-icon {
+  font-size: 2em;
+}
+
+.file-hint {
+  font-size: 0.85em;
+  color: #999;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.file-name {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.file-size {
+  color: #999;
+  font-size: 0.85em;
+}
+
+.file-remove {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 4px;
+}
+
+.file-remove:hover {
+  color: #f44336;
 }
 </style>

@@ -26,13 +26,13 @@ apps/
 │   ├── pipeline/       - Оркестрация пайплайнов (PipelineStage enum — единый источник)
 │   ├── testrail/       - Интеграция с TestRail
 │   ├── tms/            - TMS адаптеры (TestRail, Zephyr, TestIT, TestLink)
-│   ├── events/         - SSE события
+│   ├── events/         - Внутренние события (backend-only, Redis Pub/Sub)
 │   ├── health/         - Health check
 │   └── common/         - InMemoryQueue, Tenant, FileProcessor, UrlFetcher
 └── frontend/src/
     ├── api/            - API client (fetch, не axios) и типы
     ├── components/     - Vue компоненты
-    │   ├── Sidebar.vue - Левое меню (список фич, SSE, collapse)
+    │   ├── Sidebar.vue - Левое меню (список фич, polling, collapse)
     │   ├── stages/     - Stage-компоненты (Requirements, TestPlan, TestCases, etc.)
     │   └── __tests__/  - Тесты компонентов
      ├── composables/    - Vue composables (useSse, useTestCases)
@@ -81,6 +81,16 @@ Questions persistence: вопросы сохраняются в `pipeline.questi
 Answer Questions: `answerQuestions()` переводит pipeline на **следующий stage**, не перезапуская текущий. LLM получает контекст существующих артефактов (REQ и т.д.) при restart.
 
 Requirements restart: при перезапуске `requirements_extracted` LLM получает существующие требования и должен вернуть их БЕЗ ИЗМЕНЕНИЙ, если всё покрыто. Дублирование запрещено.
+
+### Source Refresh при Restart Requirements
+
+При перезапуске этапа `requirements_extracted` источник перечитывается из оригинала:
+
+- **URL** (`sourceType === 'url'`): автоматически рефетчится через `UrlFetcherService.fetchUrl()`, source artifact обновляется, LLM получает свежий контент. Модалка НЕ показывается.
+- **Text** (`sourceType === 'text'`): показывается модалка с textarea для ввода обновлённого текста → `POST /features/:slug/source` → restart.
+- **File** (`sourceType === 'file'`): показывается модалка с file dropzone для загрузки нового файла → `POST /features/:slug/source` → restart.
+
+Feature entity хранит `sourceUrl` для возможности рефетча. Endpoint `POST /features/:slug/source` обновляет source artifact через `FeaturesService.updateSource()`.
 
 ### Dry Run — Пробный запуск
 
@@ -131,28 +141,17 @@ Requirements restart: при перезапуске `requirements_extracted` LLM
 - **Теги/Requirements/TestData**: inline input с Enter для добавления, ✕ для удаления
 - **Кнопки внизу**: "Сохранить" (активна при изменениях) и "Удалить" (справа)
 
-### SSE и обновление статуса
+### Обновление статуса (HTTP Polling)
 
-Обновление UI через 3 параллельных механизма (гибридная схема):
+SSE на фронтенде удалён. Вместо этого — **HTTP polling** с единым endpoint:
 
-1. **SSE (Server-Sent Events)** — `/api/events/stream/:featureId`:
-   - Backend шлёт keepalive-события (`type: 'keepalive'`) каждые 30 секунд через `interval(30_000).pipe(merge(live$))`
-   - Keepalive предотвращает закрытие SSE браузером/прокси при простое
-   - На фронте `keepalive` события игнорируются (нет обработчика)
-   - SSE ловится в `FeatureDetailView.vue` → `scheduleRefresh()` (debounce 200ms) → HTTP GET `/pipeline/:slug/status`
-   - При переподключении (`?since=` query param) backend возвращает последние 20 событий из ring-buffer (100 событий)
-
-2. **HTTP Polling** — `FeatureDetailView.vue`:
-   - `setInterval` с настраиваемым интервалом (по умолчанию 15 секунд)
-   - Работает только пока pipeline в статусе `running | waiting_for_qa | blocked`
-   - Автоматически останавливается при `completed | failed | cancelled`
-   - Интервал настраивается в `Settings → Интерфейс → poll_interval` (5-120 секунд)
-   - Polling тикает независимо от SSE, debounce (200ms) схлопывает дублирующиеся запросы
-
-3. **Reconnect SSE после действий пользователя** — `reconnectSSE()`:
-   - При каждом действии (`run`, `cancel`, `restart`, `approve`, `answer`, `restart-stage`, `fill-gaps`)
-   - После успешного HTTP-ответа: `close()` старого EventSource → `new EventSource(...)` свежее соединение
-   - Гарантирует, что следующий SSE-поток начнётся с чистого состояния
+- **Endpoint**: `GET /api/features/:slug` возвращает `{ feature, pipeline }` (артефакты в `feature.artifacts`)
+- **Polling** в `FeatureDetailView.vue`:
+  - `setInterval` с настраиваемым интервалом (по умолчанию 5 секунд)
+  - Активен только пока `pipeline.status === 'running'`
+  - Автоматически останавливается при `completed | failed | cancelled`
+  - Интервал настраивается в `Settings → Интерфейс → poll_interval` (5-120 секунд)
+- **После действий**: все обработчики (run, cancel, restart, approve, answer, restart-stage, fill-gaps) вызывают `loadAll()` — единую функцию, которая делает один запрос и обновляет feature + pipeline + artifacts в одном render-tick
 
 ### UI-настройки (localStorage)
 
@@ -182,3 +181,5 @@ Requirements restart: при перезапуске `requirements_extracted` LLM
 - **TmsService** доступен через `TmsModule` (импортировать вButtonModule)
 - **AdapterFactory** выбирает адаптер по `TMS_PROVIDER` env: `testrail` | `zephyr` | `testit` | `testlink`
 - **getTree()** возвращает `TmsNode[]` — плоский список с `type: 'suite' | 'section'`
+- **TestRail API v2 — paginated responses**: Все collection-эндпоинты возвращают обёртку `{ offset, limit, size, _links, <resource>: [...] }`, а НЕ голый массив. Адаптер извлекает данные через `response.suites || []`, `response.sections || []`, `response.projects || []`
+- **`.env` приоритет**: `@nestjs/config` v4 с `dotenv` 17.x НЕ перезаписывает уже заданные системные env-переменные. Функция `loadEnvFileWithOverride()` в `main.ts` принудительно записывает `.env` значения в `process.env` ДО инициализации ConfigModule, чтобы `.env` всегда побеждал системные переменные
