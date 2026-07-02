@@ -165,9 +165,9 @@ SSE на фронтенде удалён. Вместо этого — **progress
 **Poll цикл (`pollCycle`):**
 1. `loadPipeline()` — лёгкий `GET /api/pipeline/:slug`, обновляет только `pipeline.value`
 2. Сравнение `stageResults` с предыдущим snapshot
-3. Если этап N завершён (status → `completed`) — `loadArtifact(type)` загружает ТОЛЬКО его артефакт
+3. Если этап N завершён (status → `completed` или `waiting_for_qa`) — `loadArtifact(type)` загружает ТОЛЬКО его артефакт
 4. `artifacts.value[type]` обновляется in-place (merge, не replace) — загруженные артефакты не затрагиваются
-5. Если `currentStage` изменился — авто-переключение `selectedStage`
+5. При остановке polling (терминальный статус) — финальная загрузка артефакта `currentStage`
 
 **Пример:** пользователь редактирует testcases → pipeline на review → review завершён → загружается `review` артефакт → `testcases` остаётся нетронутым.
 
@@ -176,10 +176,8 @@ SSE на фронтенде удалён. Вместо этого — **progress
 - restart-stage → удаляет артефакт этапа из state → `refreshAfterAction()`
 - restart pipeline → очищает все артефакты → `loadAll()`
 
-**Sidebar polling** (`Sidebar.vue`):
-- `setInterval` (10 секунд), опрашивает все фичи со статусом `running | blocked | waiting_for_qa`
-- Использует `GET /api/pipeline/:slug` (лёгкий endpoint)
-- Обновляет только `pipelineMap.value[slug]`
+**Sidebar** (`Sidebar.vue`):
+- Polling удалён. Статусы загружаются один раз при mount через `GET /api/pipeline/:slug`
 
 ### Dirty state защита (TestCasesStage)
 
@@ -197,7 +195,7 @@ SSE на фронтенде удалён. Вместо этого — **progress
 | Ключ | Тип | По умолчанию | Описание |
 |------|-----|-------------|----------|
 | `show_logs` | boolean | `true` | Показывать/скрывать секцию логов (`Settings → Интерфейс`) |
-| `poll_interval` | number (5-120) | `15` | Интервал HTTP-опроса статуса пайплайна в секундах |
+| `poll_interval` | number (5-120) | `5` | Интервал HTTP-опроса статуса пайплайна в секундах |
 
 ## Features
 
