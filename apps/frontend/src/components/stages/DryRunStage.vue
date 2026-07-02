@@ -122,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { Artifact, DryRunArtifact } from '@/api/types'
 
 const props = defineProps<{
@@ -312,6 +312,17 @@ onMounted(() => {
   resizeObserver = new ResizeObserver(recalcPanels)
   if (containerRef.value) {
     resizeObserver.observe(containerRef.value)
+  }
+})
+
+watch(dryRunData, async () => {
+  if (dryRunData.value) {
+    await nextTick()
+    if (containerRef.value) {
+      const w = containerRef.value.clientWidth
+      leftWidth.value = Math.round(w * 0.65)
+      rightWidth.value = w - leftWidth.value - 8
+    }
   }
 })
 
