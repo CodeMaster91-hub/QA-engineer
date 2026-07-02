@@ -97,10 +97,10 @@
                     :key="item.id"
                     class="tree-node"
                     :class="{ 'tree-node-selected': selectedSectionId === item.id }"
-                    @click="toggleNode(item.id)"
+                    @click="selectNode(item.id)"
                   >
                   <span class="tree-guides">{{ item.guides }}</span>
-                  <span class="tree-toggle" v-if="item.hasChildren">
+                  <span class="tree-toggle" v-if="item.hasChildren" @click.stop="expandNode(item.id)">
                     {{ expandedState[item.id] === false ? '▶' : '▼' }}
                   </span>
                   <span class="folder-icon" v-else>📂</span>
@@ -188,7 +188,7 @@ const expandedState = ref<Record<string, boolean>>({})
 const selectedSectionId = ref<string | null>(null)
 const selectedSectionName = ref<string>('')
 
-const toggleNode = (id: string) => {
+const selectNode = (id: string) => {
   if (selectedSectionId.value === id) {
     selectedSectionId.value = null
     selectedSectionName.value = ''
@@ -196,6 +196,9 @@ const toggleNode = (id: string) => {
     selectedSectionId.value = id
     selectedSectionName.value = getSectionName(id)
   }
+}
+
+const expandNode = (id: string) => {
   const sec = allSections.value.find((s) => s.id === id)
   if (sec) {
     const children = childMap.value.get(id)
