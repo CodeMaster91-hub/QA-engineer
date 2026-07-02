@@ -720,14 +720,18 @@ ${JSON.stringify(existingRequirements, null, 2)}
     let existingSections: Array<{ id: string; name: string; parentId: string | null }> = [];
 
     if (projectId) {
+      this.logger.log(`Dry run: fetching TMS tree for project ${projectId}`);
       try {
         const tree = await this.tmsService.getTree(projectId);
         existingSections = tree
           .filter((node) => node.type === 'section')
           .map((node) => ({ id: node.id, name: node.name, parentId: node.parentId || null }));
+        this.logger.log(`Dry run: loaded ${existingSections.length} sections from TMS`);
       } catch (error) {
-        this.logger.warn(`Failed to fetch TMS sections: ${error.message}`);
+        this.logger.warn(`Dry run: failed to fetch TMS sections: ${error.message}`);
       }
+    } else {
+      this.logger.warn('Dry run: TESTRAIL_PROJECT_ID not configured, existingSections will be empty');
     }
 
     const feature = await this.featuresService.findById(featureId);

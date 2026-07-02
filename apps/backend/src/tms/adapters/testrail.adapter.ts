@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   TmsAdapter,
@@ -12,6 +13,7 @@ import {
 export class TestRailAdapter extends TmsAdapter {
   readonly provider = 'testrail';
   readonly name = 'TestRail';
+  private readonly logger = new Logger(TestRailAdapter.name);
 
   private getBaseUrl(): string {
     return this.configService.get<string>('TESTRAIL_URL', '');
@@ -85,47 +87,73 @@ export class TestRailAdapter extends TmsAdapter {
 
   async getTree(projectId: string): Promise<TmsNode[]> {
     if (this.isMock()) {
+      this.logger.warn('TestRailAdapter.getTree: MOCK mode active, returning mock data');
       return [
         { id: '1', name: 'Mock Suite', type: 'suite', parentId: projectId },
       ];
     }
 
-    const suitesResponse = await this.request<any>(
-      'GET',
-      `get_suites/${projectId}`,
-    );
-    const suites = Array.isArray(suitesResponse)
-      ? suitesResponse
-      : suitesResponse.suites || [];
-
+    const suiteId = this.configService.get<string>('TESTRAIL_SUITE_ID');
     const nodes: TmsNode[] = [];
 
-    for (const suite of suites) {
-      nodes.push({
-        id: String(suite.id),
-        name: suite.name,
-        type: 'suite',
-        parentId: projectId,
-      });
-
+    if (suiteId) {
       const sectionsResponse = await this.request<any>(
         'GET',
-        `get_sections/${projectId}&suite_id=${suite.id}`,
+        `get_sections/${projectId}&suite_id=${suiteId}`,
       );
       const sections = Array.isArray(sectionsResponse)
         ? sectionsResponse
         : sectionsResponse.sections || [];
+      this.logger.log(`TestRailAdapter.getTree: project=${projectId}, suite=${suiteId}, sections=${sections.length}`);
 
       for (const section of sections) {
         nodes.push({
           id: String(section.id),
           name: section.name,
           type: 'section',
-          parentId: String(suite.id),
+          parentId: suiteId,
         });
+      }
+    } else {
+      const suitesResponse = await this.request<any>(
+        'GET',
+        `get_suites/${projectId}`,
+      );
+      const suites = Array.isArray(suitesResponse)
+        ? suitesResponse
+        : suitesResponse.suites || [];
+      this.logger.log(`TestRailAdapter.getTree: project=${projectId}, suites=${suites.length} (no TESTRAIL_SUITE_ID set, scanning all)`);
+
+      for (const suite of suites) {
+        nodes.push({
+          id: String(suite.id),
+          name: suite.name,
+          type: 'suite',
+          parentId: projectId,
+        });
+
+        const sectionsResponse = await this.request<any>(
+          'GET',
+          `get_sections/${projectId}&suite_id=${suite.id}`,
+        );
+        const sections = Array.isArray(sectionsResponse)
+          ? sectionsResponse
+          : sectionsResponse.sections || [];
+        this.logger.log(`TestRailAdapter.getTree: suite=${suite.id} (${suite.name}), sections=${sections.length}`);
+
+        for (const section of sections) {
+          nodes.push({
+            id: String(section.id),
+            name: section.name,
+            type: 'section',
+            parentId: String(suite.id),
+          });
+        }
       }
     }
 
+    const sectionCount = nodes.filter((n) => n.type === 'section').length;
+    this.logger.log(`TestRailAdapter.getTree: total nodes=${nodes.length} (suites=${nodes.filter(n => n.type === 'suite').length}, sections=${sectionCount})`);
     return nodes;
   }
 
