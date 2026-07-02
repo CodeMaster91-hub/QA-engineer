@@ -726,6 +726,13 @@ ${JSON.stringify(existingRequirements, null, 2)}
         existingSections = tree
           .filter((node) => node.type === 'section')
           .map((node) => ({ id: node.id, name: node.name, parentId: node.parentId || null }));
+        // Нормализуем parentId: suite-level родители → null (только section-to-section иерархия)
+        const sectionIds = new Set(existingSections.map((s: any) => s.id));
+        for (const sec of existingSections) {
+          if (sec.parentId && !sectionIds.has(sec.parentId)) {
+            sec.parentId = null;
+          }
+        }
         this.logger.log(`Dry run: loaded ${existingSections.length} sections from TMS`);
       } catch (error) {
         this.logger.warn(`Dry run: failed to fetch TMS sections: ${error.message}`);
@@ -787,10 +794,20 @@ ${JSON.stringify(existingRequirements, null, 2)}
    ["Массовая корректировка", "Создание заявки", "Валидация"]
    ["Массовая корректировка", "Запуск корректировки"]
 
- Пример использования существующей секции:
-   ["Уведомления", "Отложенная отправка"]  ← подпапка внутри "Уведомления"
+  Пример использования существующей секции:
+    ["Уведомления", "Отложенная отправка"]  ← подпапка внутри "Уведомления"
 
- Верни только JSON без markdown-обёртки:
+  ВАЖНО — точное совпадение имени:
+  Если targetSectionPath состоит из одного элемента и его название совпадает
+  с существующей секцией — используй targetSectionId вместо targetSectionPath.
+  НЕ создавай дубликат существующей секции.
+
+  ВАЖНО — подсекции внутри существующей секции:
+  Если нужно создать подсекцию внутри существующей — targetSectionPath
+  должен начинаться с названия этой секции. Backend сам привяжет подсекцию
+  к существующему родителю.
+
+  Верни только JSON без markdown-обёртки:
  {
    "cases": [
      {
@@ -831,6 +848,37 @@ ${JSON.stringify(existingRequirements, null, 2)}
       parsed = { cases: [] };
     }
 
+    // Нормализация: привязываем targetSectionPath к существующим секциям
+    for (const c of (parsed.cases || [])) {
+      if (c.targetSectionPath?.length) {
+        // Одноэлементный path совпадает с существующей секцией → targetSectionId
+        if (c.targetSectionPath.length === 1) {
+          const match = existingSections.find(
+            (s: any) => s.name.toLowerCase() === c.targetSectionPath[0].toLowerCase(),
+          );
+          if (match) {
+            c.targetSectionId = match.id;
+            delete c.targetSectionPath;
+            continue;
+          }
+        }
+
+        // Первый элемент path совпадает с существующей секцией →
+        // обрезаем его и привязываем новые подсекции к этому родителю
+        const firstMatch = existingSections.find(
+          (s: any) => s.name.toLowerCase() === c.targetSectionPath[0].toLowerCase(),
+        );
+        if (firstMatch) {
+          c._existingParentId = firstMatch.id;
+          c.targetSectionPath = c.targetSectionPath.slice(1);
+          if (c.targetSectionPath.length === 0) {
+            c.targetSectionId = firstMatch.id;
+            delete c.targetSectionPath;
+          }
+        }
+      }
+    }
+
     // Собираем все targetSectionPath → строим дерево новых секций с virtual ID
     const newSectionMap = new Map<string, { name: string; parentId: string | null }>();
     const allPaths = new Set<string>();
@@ -840,12 +888,22 @@ ${JSON.stringify(existingRequirements, null, 2)}
         const pathKey = JSON.stringify(c.targetSectionPath);
         if (allPaths.has(pathKey)) continue;
         allPaths.add(pathKey);
+
+        const existingParentId = c._existingParentId || null;
+
         for (let i = 0; i < c.targetSectionPath.length; i++) {
-          const segId = `__new__/${c.targetSectionPath.slice(0, i + 1).join('/')}`;
+          const segId = existingParentId
+            ? `__new__/${existingParentId}/${c.targetSectionPath.slice(0, i + 1).join('/')}`
+            : `__new__/${c.targetSectionPath.slice(0, i + 1).join('/')}`;
           if (!newSectionMap.has(segId)) {
-            const parentId = i > 0
-              ? `__new__/${c.targetSectionPath.slice(0, i).join('/')}`
-              : null;
+            let parentId: string | null;
+            if (i === 0) {
+              parentId = existingParentId || null;
+            } else {
+              parentId = existingParentId
+                ? `__new__/${existingParentId}/${c.targetSectionPath.slice(0, i).join('/')}`
+                : `__new__/${c.targetSectionPath.slice(0, i).join('/')}`;
+            }
             newSectionMap.set(segId, { name: c.targetSectionPath[i], parentId });
           }
         }
@@ -864,7 +922,10 @@ ${JSON.stringify(existingRequirements, null, 2)}
       let targetSectionName = null;
 
       if (llmResult?.targetSectionPath?.length) {
-        targetSectionId = `__new__/${llmResult.targetSectionPath.join('/')}`;
+        const existingParentId = llmResult._existingParentId || null;
+        targetSectionId = existingParentId
+          ? `__new__/${existingParentId}/${llmResult.targetSectionPath.join('/')}`
+          : `__new__/${llmResult.targetSectionPath.join('/')}`;
         targetSectionName = llmResult.targetSectionPath[llmResult.targetSectionPath.length - 1];
       } else if (llmResult?.targetSectionId) {
         const existing = existingSections.find(s => s.id === llmResult.targetSectionId);
