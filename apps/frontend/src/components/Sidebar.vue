@@ -275,21 +275,13 @@ const loadFeatures = async () => {
 
 const loadPipeline = async (slug: string) => {
   try {
-    const res = await api.get<{ feature: any; pipeline: Pipeline | null }>(`/features/${slug}`)
-    if (res.pipeline) {
-      pipelineMap.value[slug] = res.pipeline
-    } else {
-      const feature = res.feature
-      pipelineMap.value[slug] = {
-        id: '', featureId: feature.id, status: 'idle', currentStage: 'new',
-        stageResults: {}, retryCount: 0, maxRetries: 3,
-        questions: [], blockedStage: null, coverageGaps: null,
-        createdAt: '', updatedAt: '',
-      }
+    const p = await api.get<Pipeline | null>(`/pipeline/${slug}`)
+    if (p) {
+      pipelineMap.value[slug] = p
     }
   } catch {
     const feature = features.value.find(f => f.slug === slug)
-    if (feature) {
+    if (feature && !pipelineMap.value[slug]) {
       pipelineMap.value[slug] = {
         id: '', featureId: feature.id, status: 'idle', currentStage: 'new',
         stageResults: {}, retryCount: 0, maxRetries: 3,
@@ -429,22 +421,9 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize)
 }
 
-// Polling
-let pollInterval: ReturnType<typeof setInterval> | null = null
-
 onMounted(async () => {
   await Promise.all([loadFeatures(), loadModelInfo()])
   await loadPipelines()
-  pollInterval = setInterval(async () => {
-    for (const feature of features.value) {
-      const status = pipelineMap.value[feature.slug]?.status
-      if (['running', 'blocked', 'waiting_for_qa'].includes(status)) await loadPipeline(feature.slug)
-    }
-  }, 10000)
-})
-
-onUnmounted(() => {
-  if (pollInterval) clearInterval(pollInterval)
 })
 </script>
 

@@ -141,17 +141,55 @@ Feature entity хранит `sourceUrl` для возможности рефет
 - **Теги/Requirements/TestData**: inline input с Enter для добавления, ✕ для удаления
 - **Кнопки внизу**: "Сохранить" (активна при изменениях) и "Удалить" (справа)
 
-### Обновление статуса (HTTP Polling)
+### Обновление статуса (Progressive HTTP Polling)
 
-SSE на фронтенде удалён. Вместо этого — **HTTP polling** с единым endpoint:
+SSE на фронтенде удалён. Вместо этого — **progressive HTTP polling** с разделением pipeline и артефактов:
 
-- **Endpoint**: `GET /api/features/:slug` возвращает `{ feature, pipeline }` (артефакты в `feature.artifacts`)
-- **Polling** в `FeatureDetailView.vue`:
-  - `setInterval` с настраиваемым интервалом (по умолчанию 5 секунд)
-  - Активен только пока `pipeline.status === 'running'`
-  - Автоматически останавливается при `completed | failed | cancelled`
-  - Интервал настраивается в `Settings → Интерфейс → poll_interval` (5-120 секунд)
-- **После действий**: все обработчики (run, cancel, restart, approve, answer, restart-stage, fill-gaps) вызывают `loadAll()` — единую функцию, которая делает один запрос и обновляет feature + pipeline + artifacts в одном render-tick
+**Endpoint-архитектура:**
+
+| Endpoint | Описание | Используется |
+|----------|----------|-------------|
+| `GET /api/features/:slug` | Полный: `{ feature, pipeline }` + все артефакты | Первая загрузка (`loadAll`) |
+| `GET /api/pipeline/:slug` | Лёгкий: только `Pipeline` entity + `stageResults` | Каждый poll-цикл |
+| `GET /api/features/:slug/artifacts/:type` | Один артефакт по типу | Когда этап завершён |
+| `GET /api/features/:slug/artifacts` | Все артефакты фичи (массив) | При необходимости |
+
+**Polling** в `FeatureDetailView.vue`:
+
+- `setInterval` с настраиваемым интервалом (по умолчанию 5 секунд)
+- Активен только пока `pipeline.status === 'running'`
+- Автоматически останавливается при `completed | failed | cancelled`
+- Интервал настраивается в `Settings → Интерфейс → poll_interval` (5-120 секунд)
+- **isPolling guard**: предотвращает параллельные poll-циклы
+
+**Poll цикл (`pollCycle`):**
+1. `loadPipeline()` — лёгкий `GET /api/pipeline/:slug`, обновляет только `pipeline.value`
+2. Сравнение `stageResults` с предыдущим snapshot
+3. Если этап N завершён (status → `completed`) — `loadArtifact(type)` загружает ТОЛЬКО его артефакт
+4. `artifacts.value[type]` обновляется in-place (merge, не replace) — загруженные артефакты не затрагиваются
+5. Если `currentStage` изменился — авто-переключение `selectedStage`
+
+**Пример:** пользователь редактирует testcases → pipeline на review → review завершён → загружается `review` артефакт → `testcases` остаётся нетронутым.
+
+**После действий пользователя:**
+- run, cancel, approve, answer, fill-gaps → `refreshAfterAction()` — обновляет pipeline + все completed артефакты
+- restart-stage → удаляет артефакт этапа из state → `refreshAfterAction()`
+- restart pipeline → очищает все артефакты → `loadAll()`
+
+**Sidebar polling** (`Sidebar.vue`):
+- `setInterval` (10 секунд), опрашивает все фичи со статусом `running | blocked | waiting_for_qa`
+- Использует `GET /api/pipeline/:slug` (лёгкий endpoint)
+- Обновляет только `pipelineMap.value[slug]`
+
+### Dirty state защита (TestCasesStage)
+
+`useTestCases` composable защищает несохранённые правки от перезаписи при poll:
+
+- `isDirty` — сравнивает `cases.value` с `originalSnapshot` через JSON.stringify
+- `syncFromArtifact(art, force)` — если `isDirty && !force` → пропускает синхронизацию
+- При mount: `syncFromArtifact(artifact, true)` — принудительная инициализация
+- При poll (`watch` на `props.artifact`): `syncFromArtifact(art, false)` — пропускает если есть правки
+- После `save()`: обновляет snapshot, `isDirty` становится `false`
 
 ### UI-настройки (localStorage)
 

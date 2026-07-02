@@ -333,6 +333,16 @@ const stageArtifactMap: Record<string, ArtifactType> = {
   published: 'dry_run',
 }
 
+const backendStageToArtifact: Record<string, ArtifactType> = {
+  source_ingested: 'source',
+  requirements_extracted: 'requirements',
+  test_plan_created: 'testplan',
+  test_cases_created: 'testcases',
+  coverage_audited: 'coverage',
+  review: 'review',
+  dry_run_completed: 'dry_run',
+}
+
 const getArtifactForStage = (stageKey: string): Artifact | null => {
   const type = stageArtifactMap[stageKey]
   if (!type) return null
@@ -364,7 +374,7 @@ const runPipeline = async () => {
   submitting.value = true
   try {
     await api.post(`/pipeline/${featureSlug.value}/run`)
-    await loadAll()
+    await refreshAfterAction()
   } catch (e: any) {
     console.error('Failed to run pipeline:', e)
   } finally {
@@ -375,7 +385,7 @@ const runPipeline = async () => {
 const cancelPipeline = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/cancel`)
-    await loadAll()
+    await refreshAfterAction()
   } catch (e: any) {
     console.error('Failed to cancel pipeline:', e)
   }
@@ -386,6 +396,7 @@ const restartPipeline = async () => {
     await api.post(`/pipeline/${featureSlug.value}/restart`)
     logEntries.value = []
     selectedStage.value = null
+    artifacts.value = []
     await loadAll()
   } catch (e: any) {
     console.error('Failed to restart pipeline:', e)
@@ -395,7 +406,7 @@ const restartPipeline = async () => {
 const onApprove = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/approve`)
-    await loadAll()
+    await refreshAfterAction()
   } catch (e: any) {
     console.error('Failed to approve:', e)
   }
@@ -404,7 +415,7 @@ const onApprove = async () => {
 const onAnswerQuestions = async () => {
   try {
     await api.post(`/pipeline/${featureSlug.value}/answer`)
-    await loadAll()
+    await refreshAfterAction()
   } catch (e: any) {
     console.error('Failed to answer questions:', e)
   }
@@ -431,8 +442,12 @@ const doRestart = async (stageKey: string) => {
   try {
     const stageUI = PIPELINE_STAGES_UI.find(s => s.key === stageKey)
     if (!stageUI?.backendStage) return
+    const artifactType = backendStageToArtifact[stageUI.backendStage]
+    if (artifactType) {
+      artifacts.value = artifacts.value.filter(a => a.type !== artifactType)
+    }
     await api.post(`/pipeline/${featureSlug.value}/restart-stage`, { stage: stageUI.backendStage })
-    await loadAll()
+    await refreshAfterAction()
   } catch (e: any) {
     console.error('Failed to restart stage:', e)
   }
@@ -489,7 +504,7 @@ const onFillGaps = async () => {
   fillingGaps.value = true
   try {
     await api.post(`/pipeline/${featureSlug.value}/fill-gaps`, { gaps: pipeline.value.coverageGaps })
-    await loadAll()
+    await refreshAfterAction()
   } catch (e: any) {
     console.error('Failed to fill gaps:', e)
   } finally {
@@ -503,6 +518,7 @@ const onPublished = (jobId: string) => {
 }
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
+let isPolling = false
 
 const getPollIntervalMs = (): number => {
   const val = parseInt(localStorage.getItem('poll_interval') || '5', 10)
@@ -512,8 +528,9 @@ const getPollIntervalMs = (): number => {
 const startPolling = () => {
   stopPolling()
   pollInterval = setInterval(async () => {
+    if (isPolling) return
     if (pipeline.value?.status === 'running') {
-      await loadAll()
+      await pollCycle()
     } else {
       stopPolling()
     }
@@ -524,6 +541,75 @@ const stopPolling = () => {
   if (pollInterval) {
     clearInterval(pollInterval)
     pollInterval = null
+  }
+}
+
+const loadPipeline = async (): Promise<boolean> => {
+  try {
+    const p = await api.get<Pipeline | null>(`/pipeline/${featureSlug.value}`)
+    if (p) pipeline.value = p
+    return true
+  } catch (e: any) {
+    if (e.message?.includes('404')) {
+      localStorage.removeItem('lastFeatureSlug')
+      router.replace('/features')
+    }
+    return false
+  }
+}
+
+const loadArtifact = async (type: ArtifactType) => {
+  try {
+    const art = await api.get<Artifact | null>(`/features/${featureSlug.value}/artifacts/${type}`)
+    if (art) {
+      const idx = artifacts.value.findIndex(a => a.type === type)
+      if (idx >= 0) {
+        artifacts.value[idx] = art
+      } else {
+        artifacts.value.push(art)
+      }
+    }
+  } catch (e: any) {
+    console.error(`Failed to load artifact ${type}:`, e)
+  }
+}
+
+const pollCycle = async () => {
+  if (isPolling) return
+  isPolling = true
+  try {
+    const prevResults = { ...(pipeline.value?.stageResults || {}) }
+    await loadPipeline()
+
+    if (!pipeline.value) return
+
+    const currResults = pipeline.value.stageResults || {}
+
+    for (const [stage, result] of Object.entries(currResults)) {
+      const prevResult = prevResults[stage]
+      const isDone = result.status === 'completed' || result.status === 'waiting_for_qa'
+      const wasDone = prevResult?.status === 'completed' || prevResult?.status === 'waiting_for_qa'
+      if (isDone && !wasDone) {
+        const artifactType = backendStageToArtifact[stage]
+        if (artifactType) {
+          await loadArtifact(artifactType)
+        }
+      }
+    }
+
+    if (pipeline.value.status !== 'running') {
+      stopPolling()
+      const currentStage = pipeline.value.currentStage
+      const currentResult = currResults[currentStage]
+      if (currentResult && (currentResult.status === 'completed' || currentResult.status === 'waiting_for_qa')) {
+        const artifactType = backendStageToArtifact[currentStage]
+        if (artifactType) {
+          await loadArtifact(artifactType)
+        }
+      }
+    }
+  } finally {
+    isPolling = false
   }
 }
 
@@ -540,7 +626,6 @@ const loadAll = async () => {
     await autoStartPipeline()
     startPolling()
 
-    // Auto-select first available stage
     if (!selectedStage.value && pipeline.value) {
       const currentStage = pipeline.value.currentStage
       const stageUI = PIPELINE_STAGES_UI.find(s => s.backendStage === currentStage)
@@ -556,6 +641,25 @@ const loadAll = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const loadCompletedArtifacts = async () => {
+  if (!pipeline.value) return
+  const currResults = pipeline.value.stageResults || {}
+  for (const [stage, result] of Object.entries(currResults)) {
+    if (result.status === 'completed' || result.status === 'waiting_for_qa') {
+      const artifactType = backendStageToArtifact[stage]
+      if (artifactType) {
+        await loadArtifact(artifactType)
+      }
+    }
+  }
+}
+
+const refreshAfterAction = async () => {
+  await loadPipeline()
+  await loadCompletedArtifacts()
+  startPolling()
 }
 
 onMounted(loadAll)

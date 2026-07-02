@@ -318,6 +318,9 @@ const {
   save,
 } = useTestCases(props.artifact);
 
+// Initial mount — force sync
+syncFromArtifact(props.artifact, true);
+
 const { statusFilter, typeFilter, reqFilter } = useTestCasesFilters()
 
 const reqOptions = computed(() => {
@@ -346,7 +349,7 @@ function selectByFiltered(id: string) {
 
 watch(
   () => props.artifact,
-  (art) => syncFromArtifact(art),
+  (art) => syncFromArtifact(art, false),
 );
 
 async function onSave() {

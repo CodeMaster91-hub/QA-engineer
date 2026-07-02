@@ -137,6 +137,14 @@ export class FeaturesController {
     await this.featuresService.delete(slug);
   }
 
+  @Get(':slug/artifacts')
+  @ApiOperation({ summary: 'Get all artifacts for a feature' })
+  @ApiResponse({ status: 200, description: 'Artifacts list' })
+  async getArtifacts(@Param('slug') slug: string) {
+    const feature = await this.featuresService.findBySlug(slug);
+    return this.featuresService.getArtifacts(feature.id);
+  }
+
   @Get(':slug/artifacts/:type')
   @ApiOperation({ summary: 'Get artifact by type' })
   @ApiResponse({ status: 200, description: 'Artifact found' })

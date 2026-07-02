@@ -17,6 +17,11 @@ import { PipelineStage } from './pipeline.entity';
 export class PipelineController {
   constructor(private pipelineService: PipelineService) {}
 
+  @Get(':slug')
+  async findBySlug(@Param('slug') slug: string) {
+    return this.pipelineService.findByFeatureSlug(slug);
+  }
+
   @Post(':slug/run')
   @HttpCode(HttpStatus.OK)
   async run(@Param('slug') slug: string) {

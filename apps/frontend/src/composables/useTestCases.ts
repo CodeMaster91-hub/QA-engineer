@@ -29,7 +29,8 @@ export function useTestCases(artifact: Artifact | null) {
     originalSnapshot.value = JSON.stringify(cases.value);
   }
 
-  function syncFromArtifact(art: Artifact | null) {
+  function syncFromArtifact(art: Artifact | null, force: boolean = false) {
+    if (!force && isDirty.value) return;
     const raw = art?.content?.cases || [];
     cases.value = raw.map((c: any) => ({
       ...c,
@@ -134,8 +135,6 @@ export function useTestCases(artifact: Artifact | null) {
       saving.value = false;
     }
   }
-
-  syncFromArtifact(artifact);
 
   return {
     cases,
